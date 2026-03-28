@@ -1,5 +1,5 @@
 // Prisma schema — defines database models and relationships
-// Run: npx prisma migrate dev --name init
+// Connection URL is configured in prisma.config.ts (Prisma 7+)
 
 generator client {
   provider = "prisma-client-js"
@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
