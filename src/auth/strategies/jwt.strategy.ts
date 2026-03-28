@@ -1,26 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import 'dotenv/config';
 
-// This payload is what we put INSIDE the JWT token when we sign it
 export interface JwtPayload {
-  sub: string;  // subject = user id
+  sub: string;
   email: string;
 }
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
+    const secret = process.env.JWT_ACCESS_SECRET;
+    if (!secret) {
+      throw new Error('JWT_ACCESS_SECRET is not defined in environment variables');
+    }
+
     super({
-      // Extract token from Authorization: Bearer <token> header
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET ?? 'fallback_secret',
+      secretOrKey: secret,
     });
   }
 
-  // This runs after token signature is verified
-  // Whatever we return here gets attached to request.user
   validate(payload: JwtPayload) {
     return { userId: payload.sub, email: payload.email };
   }
