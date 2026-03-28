@@ -1,0 +1,40 @@
+// Prisma schema — defines database models and relationships
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  videos Video[]
+}
+
+model Video {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  filePath    String
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Index on title for fast search queries
+  @@index([title])
+  // Index on userId for fast user video lookups
+  @@index([userId])
+}

@@ -1,27 +1,36 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
-import { VideoResponse } from './interfaces/video.interface';
 
 @Injectable()
 export class VideoService {
-  // Temporary in-memory store until Prisma is added
-  private videos: VideoResponse[] = [];
+  constructor(private prisma: PrismaService) {}
 
-  findAll(): VideoResponse[] {
-    return this.videos;
+  async findAll() {
+    // Optimized query — only select needed fields, include user name
+    return this.prisma.video.findMany({
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        filePath: true,
+        createdAt: true,
+        user: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
-  upload(dto: UploadVideoDto, userId: string): VideoResponse {
-    const video: VideoResponse = {
-      id: Date.now().toString(),
-      title: dto.title,
-      description: dto.description,
-      filePath: `/uploads/${Date.now()}.mp4`,
-      userId,
-      createdAt: new Date(),
-    };
-
-    this.videos.push(video);
-    return video;
+  async upload(dto: UploadVideoDto, userId: string) {
+    return this.prisma.video.create({
+      data: {
+        title: dto.title,
+        description: dto.description,
+        filePath: `/uploads/${Date.now()}.mp4`,
+        userId,
+      },
+    });
   }
 }
