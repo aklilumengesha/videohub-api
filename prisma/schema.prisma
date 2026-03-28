@@ -1,12 +1,10 @@
-// Prisma schema — defines database models and relationships
-// Connection URL is configured in prisma.config.ts (Prisma 7+)
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -32,8 +30,6 @@ model Video {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Index on title for fast search queries
   @@index([title])
-  // Index on userId for fast user video lookups
   @@index([userId])
 }
