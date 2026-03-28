@@ -13,23 +13,14 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterUserDto) {
-    // Check if email already exists
     const existing = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-    if (existing) {
-      throw new ConflictException('Email already registered');
-    }
+    if (existing) throw new ConflictException('Email already registered');
 
-    // Hash password — never store plain text
     const passwordHash = await bcrypt.hash(dto.password, 10);
-
     const user = await this.prisma.user.create({
-      data: {
-        name: dto.name,
-        email: dto.email,
-        passwordHash,
-      },
+      data: { name: dto.name, email: dto.email, passwordHash },
     });
 
     return this.generateTokens(user.id, user.email);
@@ -39,15 +30,10 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!isMatch) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
     return this.generateTokens(user.id, user.email);
   }
@@ -55,14 +41,15 @@ export class AuthService {
   private generateTokens(userId: string, email: string) {
     const payload = { sub: userId, email };
 
+    // expiresIn must be a number (seconds) in newer @nestjs/jwt versions
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
+      expiresIn: 900,      // 15 minutes in seconds
     });
 
     const refreshToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '7d',
+      expiresIn: 604800,   // 7 days in seconds
     });
 
     return { accessToken, refreshToken };
