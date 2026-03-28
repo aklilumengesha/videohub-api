@@ -1,8 +1,13 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller, Get, Post, Body, UseGuards, Request,
+  UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { VideoService } from './video.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { multerStorage, videoFileFilter, MAX_FILE_SIZE } from './multer.config';
 
 @ApiTags('videos')
 @Controller('videos')
@@ -16,16 +21,41 @@ export class VideoController {
     return this.videoService.findAll();
   }
 
-  @ApiOperation({ summary: 'Upload a new video (requires auth)' })
-  @ApiResponse({ status: 201, description: 'Video uploaded successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - JWT token required' })
-  @ApiBearerAuth()  // Shows lock icon in Swagger UI
+  @ApiOperation({ summary: 'Upload a video file with metadata (requires auth)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Video uploaded and compressed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multerStorage,
+      fileFilter: videoFileFilter,
+      limits: { fileSize: MAX_FILE_SIZE },
+    }),
+  )
   @Post('upload')
-  upload(
+  async upload(
     @Body() dto: UploadVideoDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE })],
+        fileIsRequired: false, // Allow upload without file for testing
+      }),
+    )
+    file: Express.Multer.File | undefined,
     @Request() req: { user: { userId: string; email: string } },
   ) {
-    return this.videoService.upload(dto, req.user.userId);
+    return this.videoService.upload(dto, req.user.userId, file);
   }
 }

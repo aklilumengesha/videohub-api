@@ -24,4 +24,7 @@ Thumbs.db
 # Prisma
 prisma/migrations/dev.db
 
+# Uploads
+uploads/
+
 /generated/prisma
