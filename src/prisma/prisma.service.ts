@@ -1,10 +1,17 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import 'dotenv/config';
 
-// Prisma 7 — connection URL is handled via prisma.config.ts
-// No need to pass datasources in constructor
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+  constructor() {
+    // Prisma 7 requires explicit URL passed to constructor
+    // DATABASE_URL is the pooler URL for runtime connections
+    super({
+      datasourceUrl: process.env.DATABASE_URL,
+    });
+  }
+
   async onModuleInit() {
     await this.$connect();
   }
