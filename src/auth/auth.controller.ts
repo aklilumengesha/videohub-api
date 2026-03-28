@@ -1,20 +1,26 @@
 import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import { LoginDto } from './dto/login.dto';
 
+@ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // POST /auth/register
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'Returns access and refresh tokens' })
+  @ApiResponse({ status: 409, description: 'Email already registered' })
   @Post('register')
   register(@Body() dto: RegisterUserDto) {
     return this.authService.register(dto);
   }
 
-  // POST /auth/login
-  @HttpCode(HttpStatus.OK) // Override default 201 to 200 for login
+  @ApiOperation({ summary: 'Login with email and password' })
+  @ApiResponse({ status: 200, description: 'Returns access and refresh tokens' })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @HttpCode(HttpStatus.OK)
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
