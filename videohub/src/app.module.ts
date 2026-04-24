@@ -14,10 +14,10 @@ import { FollowModule } from './follow/follow.module';
 import { FeedModule } from './feed/feed.module';
 import { SearchModule } from './search/search.module';
 import { NotificationModule } from './notification/notification.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
-    // Global rate limit: 100 requests per minute per IP
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,
@@ -35,11 +35,11 @@ import { NotificationModule } from './notification/notification.module';
     FeedModule,
     SearchModule,
     NotificationModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
-    // Apply ThrottlerGuard globally to all routes
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
