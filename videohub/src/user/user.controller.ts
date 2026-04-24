@@ -39,4 +39,12 @@ export class UserController {
   getPublicProfile(@Param('id') id: string) {
     return this.userService.getPublicProfile(id);
   }
+
+  @ApiOperation({ summary: 'Get all videos uploaded by a user' })
+  @ApiResponse({ status: 200, description: 'Returns list of user videos' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @Get(':id/videos')
+  getUserVideos(@Param('id') id: string) {
+    return this.userService.getUserVideos(id);
+  }
 }

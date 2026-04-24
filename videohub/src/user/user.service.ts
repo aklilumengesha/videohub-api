@@ -40,6 +40,24 @@ export class UserService {
     return user;
   }
 
+  async getUserVideos(userId: string) {
+    // Verify user exists first
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.prisma.video.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        filePath: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async updateMe(userId: string, dto: UpdateUserDto) {
     const user = await this.prisma.user.update({
       where: { id: userId },
