@@ -25,15 +25,17 @@ model User {
 }
 
 model Video {
-  id           String   @id @default(uuid())
+  id           String      @id @default(uuid())
   title        String
   description  String?
-  filePath     String
+  filePath     String?
   userId       String
-  likeCount    Int      @default(0)
-  commentCount Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  likeCount    Int         @default(0)
+  commentCount Int         @default(0)
+  status       VideoStatus @default(PROCESSING)
+  duration     Int?        // seconds
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes    Like[]
@@ -41,6 +43,13 @@ model Video {
 
   @@index([title])
   @@index([userId])
+  @@index([status])
+}
+
+enum VideoStatus {
+  PROCESSING
+  READY
+  FAILED
 }
 
 model Like {
