@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, UseGuards, Request, Param,
+  Controller, Get, Post, Delete, Body, UseGuards, Request, Param,
   UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -27,6 +27,21 @@ export class VideoController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.videoService.findOne(id);
+  }
+
+  @ApiOperation({ summary: 'Delete a video (owner only)' })
+  @ApiResponse({ status: 200, description: 'Video deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden — not the owner' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id')
+  remove(
+    @Param('id') id: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.videoService.remove(id, req.user.userId);
   }
 
   @ApiOperation({ summary: 'Upload a video file with metadata (requires auth)' })
