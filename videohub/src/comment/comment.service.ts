@@ -1,16 +1,19 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class CommentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationService,
+  ) {}
 
   async create(videoId: string, userId: string, dto: CreateCommentDto) {
     const video = await this.prisma.video.findUnique({ where: { id: videoId } });
     if (!video) throw new NotFoundException('Video not found');
 
-    // Use transaction: create comment + increment commentCount atomically
     const [comment] = await this.prisma.$transaction([
       this.prisma.comment.create({
         data: { content: dto.content, userId, videoId },
@@ -26,6 +29,9 @@ export class CommentService {
         data: { commentCount: { increment: 1 } },
       }),
     ]);
+
+    // Notify the video owner (fire-and-forget)
+    this.notifications.create(video.userId, userId, 'VIDEO_COMMENTED', videoId);
 
     return comment;
   }

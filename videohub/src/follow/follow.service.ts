@@ -1,29 +1,31 @@
 import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class FollowService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notifications: NotificationService,
+  ) {}
 
   async follow(followingId: string, followerId: string) {
-    // Cannot follow yourself
     if (followerId === followingId) {
       throw new BadRequestException('You cannot follow yourself');
     }
 
-    // Verify target user exists
     const target = await this.prisma.user.findUnique({ where: { id: followingId } });
     if (!target) throw new NotFoundException('User not found');
 
-    // Check if already following
     const existing = await this.prisma.follow.findUnique({
       where: { followerId_followingId: { followerId, followingId } },
     });
     if (existing) throw new ConflictException('Already following this user');
 
-    await this.prisma.follow.create({
-      data: { followerId, followingId },
-    });
+    await this.prisma.follow.create({ data: { followerId, followingId } });
+
+    // Notify the followed user (fire-and-forget)
+    this.notifications.create(followingId, followerId, 'NEW_FOLLOWER');
 
     return { message: 'Now following', followingId };
   }
