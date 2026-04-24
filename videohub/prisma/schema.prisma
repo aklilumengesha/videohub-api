@@ -17,9 +17,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  videos   Video[]
-  likes    Like[]
-  comments Comment[]
+  videos    Video[]
+  likes     Like[]
+  comments  Comment[]
+  following Follow[]  @relation("follower")   // users this user follows
+  followers Follow[]  @relation("following")  // users following this user
 }
 
 model Video {
@@ -67,4 +69,19 @@ model Comment {
 
   @@index([videoId])  // fast "get comments for a video" queries
   @@index([userId])   // fast "get comments by a user" queries
+}
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+
+  // followerId = the user who clicked "follow"
+  // followingId = the user being followed
+  follower  User @relation("follower",  fields: [followerId],  references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])  // composite key — can only follow once
+  @@index([followerId])            // fast "who does this user follow"
+  @@index([followingId])           // fast "who follows this user"
 }
