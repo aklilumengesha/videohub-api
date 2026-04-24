@@ -11,6 +11,7 @@ import { CommentModule } from './comment/comment.module';
 import { FollowModule } from './follow/follow.module';
 import { FeedModule } from './feed/feed.module';
 import { SearchModule } from './search/search.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { SearchModule } from './search/search.module';
     FollowModule,
     FeedModule,
     SearchModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

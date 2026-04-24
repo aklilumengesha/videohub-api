@@ -17,11 +17,13 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  videos    Video[]
-  likes     Like[]
-  comments  Comment[]
-  following Follow[]  @relation("follower")   // users this user follows
-  followers Follow[]  @relation("following")  // users following this user
+  videos              Video[]
+  likes               Like[]
+  comments            Comment[]
+  following           Follow[]       @relation("follower")
+  followers           Follow[]       @relation("following")
+  notifications       Notification[] @relation("recipient")
+  sentNotifications   Notification[] @relation("actor")
 }
 
 model Video {
@@ -93,4 +95,26 @@ model Follow {
   @@id([followerId, followingId])  // composite key — can only follow once
   @@index([followerId])            // fast "who does this user follow"
   @@index([followingId])           // fast "who follows this user"
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           // who receives it
+  actorId   String           // who triggered it
+  type      NotificationType
+  videoId   String?          // optional — not all notifications relate to a video
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user  User  @relation("recipient", fields: [userId],  references: [id], onDelete: Cascade)
+  actor User  @relation("actor",     fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([userId])           // fast "get my notifications"
+  @@index([userId, read])     // fast "get my unread notifications"
+}
+
+enum NotificationType {
+  NEW_FOLLOWER
+  VIDEO_LIKED
+  VIDEO_COMMENTED
 }
