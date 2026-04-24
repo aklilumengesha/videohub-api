@@ -136,7 +136,7 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {videos.map((video) => (
-              <div key={video.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+              <Link key={video.id} href={`/videos/${video.id}`} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                 {/* Video thumbnail placeholder */}
                 <div className="h-40 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
                   <span className="text-4xl">🎥</span>
@@ -151,7 +151,7 @@ export default function HomePage() {
                     <span>{new Date(video.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
