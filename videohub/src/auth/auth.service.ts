@@ -56,6 +56,15 @@ export class AuthService {
     return tokens;
   }
 
+  async logout(userId: string) {
+    // Clear the refresh token from DB — invalidates all existing refresh tokens
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
+    return { message: 'Logged out successfully' };
+  }
+
   async refresh(userId: string, incomingRefreshToken: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
