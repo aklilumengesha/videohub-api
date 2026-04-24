@@ -62,17 +62,6 @@ export default function NotificationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-blue-600">VideoHub</Link>
-          <div className="flex items-center gap-4">
-            <Link href="/feed" className="text-sm text-gray-600 hover:text-gray-900">Feed</Link>
-            <Link href="/search" className="text-sm text-gray-600 hover:text-gray-900">Search</Link>
-          </div>
-        </div>
-      </nav>
-
       <main className="max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

@@ -85,14 +85,6 @@ export default function UploadPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-blue-600">VideoHub</Link>
-          <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">← Back to videos</Link>
-        </div>
-      </nav>
-
       <main className="max-w-xl mx-auto px-6 py-10">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Upload Video</h1>
         <p className="text-gray-500 text-sm mb-8">Share your video with the community</p>

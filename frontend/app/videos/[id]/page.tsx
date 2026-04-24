@@ -109,14 +109,6 @@ export default function VideoPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-blue-600">VideoHub</Link>
-          <Link href="/" className="text-sm text-gray-600 hover:text-gray-900">← All videos</Link>
-        </div>
-      </nav>
-
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
