@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bull';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -12,6 +13,10 @@ import { FeedModule } from './feed/feed.module';
 
 @Module({
   imports: [
+    // BullModule — connects to Redis for job queues
+    BullModule.forRoot({
+      redis: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    }),
     PrismaModule,
     AuthModule,
     UserModule,
