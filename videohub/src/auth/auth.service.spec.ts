@@ -1,14 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-// Mock PrismaService — we don't want real DB calls in unit tests
+// Mock PrismaService — no real DB calls in unit tests
 const mockPrismaService = {
   user: {
     findUnique: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
   },
 };
 
@@ -30,42 +31,43 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-
-    // Reset all mocks before each test
     jest.clearAllMocks();
   });
 
+  // ── register ────────────────────────────────────────────────────────────────
+
   describe('register', () => {
-    it('should return tokens when registration is successful', async () => {
-      // Arrange — no existing user
+    it('should return tokens and store hashed refresh token on success', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
       mockPrismaService.user.create.mockResolvedValue({
         id: 'user-1',
         email: 'test@example.com',
         name: 'Test User',
       });
+      mockPrismaService.user.update.mockResolvedValue({});
 
-      // Act
       const result = await service.register({
         name: 'Test User',
         email: 'test@example.com',
         password: 'password123',
       });
 
-      // Assert
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
       expect(mockPrismaService.user.create).toHaveBeenCalledTimes(1);
+      // update should be called to store the hashed refresh token
+      expect(mockPrismaService.user.update).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'user-1' },
+          data: expect.objectContaining({ refreshToken: expect.any(String) }),
+        }),
+      );
     });
 
     it('should throw ConflictException if email already exists', async () => {
-      // Arrange — user already exists
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        email: 'test@example.com',
-      });
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: 'user-1' });
 
-      // Act & Assert
       await expect(
         service.register({
           name: 'Test User',
@@ -75,6 +77,8 @@ describe('AuthService', () => {
       ).rejects.toThrow(ConflictException);
     });
   });
+
+  // ── login ────────────────────────────────────────────────────────────────────
 
   describe('login', () => {
     it('should throw UnauthorizedException if user not found', async () => {
@@ -89,13 +93,65 @@ describe('AuthService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue({
         id: 'user-1',
         email: 'test@example.com',
-        // bcrypt hash of 'correctpassword'
         passwordHash: '$2a$10$invalidhashfortest',
       });
 
       await expect(
         service.login({ email: 'test@example.com', password: 'wrongpassword' }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  // ── logout ───────────────────────────────────────────────────────────────────
+
+  describe('logout', () => {
+    it('should clear the refresh token in DB', async () => {
+      mockPrismaService.user.update.mockResolvedValue({});
+
+      const result = await service.logout('user-1');
+
+      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { refreshToken: null },
+      });
+      expect(result).toEqual({ message: 'Logged out successfully' });
+    });
+  });
+
+  // ── refresh ──────────────────────────────────────────────────────────────────
+
+  describe('refresh', () => {
+    it('should throw ForbiddenException if user not found', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.refresh('user-1', 'some_token')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should throw ForbiddenException if user has no stored refresh token', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+        refreshToken: null,
+      });
+
+      await expect(service.refresh('user-1', 'some_token')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should throw ForbiddenException if token does not match stored hash', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'test@example.com',
+        // valid bcrypt hash but for a different token
+        refreshToken: '$2a$10$invalidhashfortest',
+      });
+
+      await expect(service.refresh('user-1', 'wrong_token')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });
