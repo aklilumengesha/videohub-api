@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Put, Body, UseGuards, Request, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -30,5 +30,13 @@ export class UserController {
     @Body() dto: UpdateUserDto,
   ) {
     return this.userService.updateMe(req.user.userId, dto);
+  }
+
+  @ApiOperation({ summary: 'Get public profile of any user by ID' })
+  @ApiResponse({ status: 200, description: 'Returns public user profile' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @Get(':id')
+  getPublicProfile(@Param('id') id: string) {
+    return this.userService.getPublicProfile(id);
   }
 }
