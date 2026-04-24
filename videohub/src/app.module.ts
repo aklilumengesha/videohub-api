@@ -10,10 +10,10 @@ import { LikeModule } from './like/like.module';
 import { CommentModule } from './comment/comment.module';
 import { FollowModule } from './follow/follow.module';
 import { FeedModule } from './feed/feed.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
-    // BullModule — connects to Redis for job queues
     BullModule.forRoot({
       redis: process.env.REDIS_URL ?? 'redis://localhost:6379',
     }),
@@ -25,6 +25,7 @@ import { FeedModule } from './feed/feed.module';
     CommentModule,
     FollowModule,
     FeedModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],
