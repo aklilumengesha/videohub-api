@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgres:
@@ -44,11 +42,12 @@ services:
     restart: unless-stopped
     ports:
       - '3000:3000'
+    env_file:
+      - ./videohub/.env          # reads DATABASE_URL, JWT secrets, etc. from .env
     environment:
+      # Override DB and Redis to point at Docker service names, not localhost
       DATABASE_URL: postgresql://videohub:videohub_password@postgres:5432/videohub
       REDIS_URL: redis://redis:6379
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       PORT: 3000
     depends_on:
       postgres:
