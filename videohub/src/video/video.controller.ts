@@ -30,6 +30,14 @@ export class VideoController {
     return this.videoService.findOne(id);
   }
 
+  @ApiOperation({ summary: 'Get video processing status' })
+  @ApiResponse({ status: 200, description: 'Returns video id, title, status and filePath' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  @Get(':id/status')
+  getStatus(@Param('id') id: string) {
+    return this.videoService.getStatus(id);
+  }
+
   @ApiOperation({ summary: 'Delete a video (owner only)' })
   @ApiResponse({ status: 200, description: 'Video deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

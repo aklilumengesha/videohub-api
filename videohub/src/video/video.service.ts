@@ -1,15 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 import { PrismaService } from '../prisma/prisma.service';
 import { FfmpegService } from './ffmpeg.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
+import { VIDEO_PROCESSING_QUEUE } from './video.constants';
 
 @Injectable()
 export class VideoService {
   constructor(
     private prisma: PrismaService,
     private ffmpeg: FfmpegService,
+    @InjectQueue(VIDEO_PROCESSING_QUEUE) private videoQueue: Queue,
   ) {}
 
   async findAll() {
@@ -91,26 +95,47 @@ export class VideoService {
     userId: string,
     file?: Express.Multer.File,
   ) {
-    let filePath = `/uploads/placeholder.mp4`;
-
-    if (file) {
-      // Compress the uploaded video using ffmpeg
-      try {
-        const compressedPath = await this.ffmpeg.compress(file.path);
-        filePath = compressedPath;
-      } catch {
-        // If ffmpeg fails (not installed), use original file
-        filePath = file.path;
-      }
-    }
-
-    return this.prisma.video.create({
+    // Create the video record immediately with PROCESSING status
+    const video = await this.prisma.video.create({
       data: {
         title: dto.title,
         description: dto.description,
-        filePath,
+        filePath: file?.path ?? null,
         userId,
+        status: 'PROCESSING',
       },
     });
+
+    // If a file was uploaded, add a compression job to the queue
+    // The processor will update status to READY or FAILED when done
+    if (file) {
+      await this.videoQueue.add('compress', {
+        videoId: video.id,
+        filePath: file.path,
+      });
+    } else {
+      // No file — mark as ready immediately (useful for testing)
+      await this.prisma.video.update({
+        where: { id: video.id },
+        data: { status: 'READY' },
+      });
+    }
+
+    // Return immediately — client polls GET /videos/:id to check status
+    return {
+      id: video.id,
+      title: video.title,
+      status: video.status,
+      message: file ? 'Video uploaded and queued for processing' : 'Video created',
+    };
+  }
+
+  async getStatus(id: string) {
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+      select: { id: true, title: true, status: true, filePath: true },
+    });
+    if (!video) throw new NotFoundException('Video not found');
+    return video;
   }
 }
