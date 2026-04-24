@@ -8,6 +8,7 @@ import { VideoModule } from './video/video.module';
 import { LikeModule } from './like/like.module';
 import { CommentModule } from './comment/comment.module';
 import { FollowModule } from './follow/follow.module';
+import { FeedModule } from './feed/feed.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { FollowModule } from './follow/follow.module';
     LikeModule,
     CommentModule,
     FollowModule,
+    FeedModule,
   ],
   controllers: [AppController],
   providers: [AppService],
