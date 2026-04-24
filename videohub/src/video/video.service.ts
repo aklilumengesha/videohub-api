@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FfmpegService } from './ffmpeg.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
@@ -22,6 +23,24 @@ export class VideoService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async findOne(id: string) {
+    const video = await this.prisma.video.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        filePath: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!video) throw new NotFoundException('Video not found');
+    return video;
   }
 
   async upload(

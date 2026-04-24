@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Body, UseGuards, Request,
+  Controller, Get, Post, Body, UseGuards, Request, Param,
   UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -19,6 +19,14 @@ export class VideoController {
   @Get()
   findAll() {
     return this.videoService.findAll();
+  }
+
+  @ApiOperation({ summary: 'Get a single video by ID' })
+  @ApiResponse({ status: 200, description: 'Returns the video' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.videoService.findOne(id);
   }
 
   @ApiOperation({ summary: 'Upload a video file with metadata (requires auth)' })
