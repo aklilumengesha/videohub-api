@@ -18,6 +18,7 @@ model User {
   updatedAt    DateTime @updatedAt
 
   videos Video[]
+  likes  Like[]
 }
 
 model Video {
@@ -26,11 +27,26 @@ model Video {
   description String?
   filePath    String
   userId      String
+  likeCount   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  likes Like[]
 
   @@index([title])
   @@index([userId])
+}
+
+model Like {
+  userId  String
+  videoId String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([userId, videoId])  // composite key — one like per user per video
+  @@index([videoId])       // fast "count likes for a video" queries
+  @@index([userId])        // fast "videos liked by a user" queries
 }
