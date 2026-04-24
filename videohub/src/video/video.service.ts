@@ -3,6 +3,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { FfmpegService } from './ffmpeg.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
+import { UpdateVideoDto } from './dto/update-video.dto';
 
 @Injectable()
 export class VideoService {
@@ -55,6 +56,34 @@ export class VideoService {
 
     await this.prisma.video.delete({ where: { id } });
     return { message: 'Video deleted successfully' };
+  }
+
+  async update(id: string, userId: string, dto: UpdateVideoDto) {
+    const video = await this.prisma.video.findUnique({ where: { id } });
+
+    if (!video) throw new NotFoundException('Video not found');
+
+    // Only the owner can update their video
+    if (video.userId !== userId) {
+      throw new ForbiddenException('You can only edit your own videos');
+    }
+
+    return this.prisma.video.update({
+      where: { id },
+      data: {
+        ...(dto.title && { title: dto.title }),
+        ...(dto.description !== undefined && { description: dto.description }),
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        filePath: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: { id: true, name: true } },
+      },
+    });
   }
 
   async upload(

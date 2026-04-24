@@ -1,11 +1,12 @@
 import {
-  Controller, Get, Post, Delete, Body, UseGuards, Request, Param,
+  Controller, Get, Post, Put, Delete, Body, UseGuards, Request, Param,
   UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { VideoService } from './video.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
+import { UpdateVideoDto } from './dto/update-video.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { multerStorage, videoFileFilter, MAX_FILE_SIZE } from './multer.config';
 
@@ -42,6 +43,22 @@ export class VideoController {
     @Request() req: { user: { userId: string } },
   ) {
     return this.videoService.remove(id, req.user.userId);
+  }
+
+  @ApiOperation({ summary: 'Update video title and description (owner only)' })
+  @ApiResponse({ status: 200, description: 'Returns updated video' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden — not the owner' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Put(':id')
+  update(
+    @Param('id') id: string,
+    @Request() req: { user: { userId: string } },
+    @Body() dto: UpdateVideoDto,
+  ) {
+    return this.videoService.update(id, req.user.userId, dto);
   }
 
   @ApiOperation({ summary: 'Upload a video file with metadata (requires auth)' })
