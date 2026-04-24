@@ -3,12 +3,16 @@ dotenv.config();
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS for Next.js frontend on port 3001
+  // Security headers — protects against common web vulnerabilities
+  app.use(helmet());
+
+  // Enable CORS for Next.js frontend
   app.enableCors({
     origin: ['http://localhost:3001', 'http://localhost:3000'],
     credentials: true,
@@ -28,7 +32,7 @@ async function bootstrap() {
     .setTitle('VideoHub API')
     .setDescription('A simplified video-sharing platform backend')
     .setVersion('1.0')
-    .addBearerAuth()  // Enables JWT auth in Swagger UI
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
