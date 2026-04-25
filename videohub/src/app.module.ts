@@ -19,6 +19,7 @@ import { NotificationModule } from './notification/notification.module';
 import { HealthModule } from './health/health.module';
 import { PlaylistModule } from './playlist/playlist.module';
 import { AdminModule } from './admin/admin.module';
+import { SseModule } from './sse/sse.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { AdminModule } from './admin/admin.module';
     HealthModule,
     PlaylistModule,
     AdminModule,
+    SseModule,
   ],
   controllers: [AppController],
   providers: [

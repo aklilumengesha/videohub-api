@@ -23,20 +23,39 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
 
   useEffect(() => {
     if (!isLoggedIn) { setUnreadCount(0); setAvatarUrl(null); setUserName(''); return; }
-    const fetchNotifs = () => {
-      notificationsApi.getUnreadCount()
-        .then(data => setUnreadCount(data.count ?? 0))
-        .catch(() => {});
-    };
-    fetchNotifs();
-    const interval = setInterval(fetchNotifs, 30000);
 
-    // Fetch user profile for avatar
+    // Fetch initial unread count + user profile
+    notificationsApi.getUnreadCount()
+      .then(data => setUnreadCount(data.count ?? 0))
+      .catch(() => {});
     usersApi.getMe()
       .then(u => { setAvatarUrl(u.avatarUrl ?? null); setUserName(u.name); })
       .catch(() => {});
 
-    return () => clearInterval(interval);
+    // Open SSE stream for real-time notifications
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (!token) return;
+
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    const es = new EventSource(`${API_BASE}/sse/events?token=${encodeURIComponent(token)}`);
+
+    es.addEventListener('notification', () => {
+      // Any new notification — increment badge
+      setUnreadCount(c => c + 1);
+    });
+
+    es.onerror = () => {
+      // SSE disconnected — fall back to polling
+      es.close();
+      const interval = setInterval(() => {
+        notificationsApi.getUnreadCount()
+          .then(data => setUnreadCount(data.count ?? 0))
+          .catch(() => {});
+      }, 30000);
+      return () => clearInterval(interval);
+    };
+
+    return () => { es.close(); };
   }, [isLoggedIn]);
 
   const handleSearch = (e: React.FormEvent) => {
