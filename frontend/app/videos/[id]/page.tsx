@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { videosApi, likesApi, commentsApi, playlistsApi, type Video, type Comment, type Playlist } from '@/lib/api';
+import { videosApi, likesApi, commentsApi, playlistsApi, type Video, type Comment, type Playlist, type VideoChapter } from '@/lib/api';
 import HlsPlayer from '@/components/HlsPlayer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -38,6 +38,10 @@ export default function VideoPage() {
   const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
   const [savingTo, setSavingTo] = useState<string | null>(null);
 
+  // Chapters
+  const [chapters, setChapters] = useState<VideoChapter[]>([]);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -50,6 +54,8 @@ export default function VideoPage() {
         setLikeCount(v.likeCount);
         setComments(c);
         setRelated(r);
+        // Load chapters (non-blocking)
+        videosApi.getChapters(id).then((ch: VideoChapter[]) => setChapters(ch)).catch(() => {});
         // Record watch in history (fire-and-forget — only works if logged in)
         videosApi.recordWatch(id).catch(() => {});
       } catch {
@@ -108,6 +114,12 @@ export default function VideoPage() {
     finally { setSavingTo(null); setShowPlaylistMenu(false); }
   };
 
+  const seekTo = (seconds: number) => {
+    // Works for plain <video> elements; HlsPlayer exposes its own video element
+    const el = document.querySelector('video') as HTMLVideoElement | null;
+    if (el) { el.currentTime = seconds; el.play().catch(() => {}); }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>;
 
   if (error || !video) return (
@@ -156,8 +168,7 @@ export default function VideoPage() {
                 </div>
                 <button onClick={handleLike} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${liked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500'}`}>
                   {liked ? '❤️' : '🤍'} {likeCount}
-                </button>
-                {/* Save to playlist */}
+                </button>                {/* Save to playlist */}
                 <div className="relative">
                   <button onClick={openPlaylistMenu}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
@@ -189,6 +200,27 @@ export default function VideoPage() {
                 </div>
               </div>
             </div>
+
+            {/* Chapters panel */}
+            {chapters.length > 0 && (
+              <div className="bg-white rounded-xl p-4">
+                <h2 className="font-semibold text-gray-900 mb-3">Chapters</h2>
+                <div className="space-y-1">
+                  {chapters.map(ch => (
+                    <button
+                      key={ch.id}
+                      onClick={() => seekTo(ch.startTime)}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-left transition-colors group"
+                    >
+                      <span className="text-xs font-mono text-blue-600 w-10 flex-shrink-0">
+                        {formatDuration(ch.startTime)}
+                      </span>
+                      <span className="text-sm text-gray-700 group-hover:text-gray-900">{ch.title}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ── Comments (1 col) ── */}

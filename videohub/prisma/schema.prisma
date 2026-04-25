@@ -52,6 +52,7 @@ model Video {
   comments Comment[]
   watchHistory WatchHistory[]
   playlists    PlaylistVideo[]
+  chapters     VideoChapter[]
 
   @@index([title])
   @@index([userId])
@@ -169,4 +170,16 @@ model PlaylistVideo {
 
   @@id([playlistId, videoId])
   @@index([playlistId])
+}
+
+model VideoChapter {
+  id        String @id @default(uuid())
+  videoId   String
+  title     String
+  startTime Int    // seconds from start
+  position  Int    // display order
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
 }

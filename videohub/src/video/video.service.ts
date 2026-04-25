@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FfmpegService } from './ffmpeg.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
+import { SetChaptersDto } from './dto/set-chapters.dto';
 import { VIDEO_PROCESSING_QUEUE } from './video.constants';
 
 @Injectable()
@@ -255,5 +256,39 @@ export class VideoService implements OnModuleInit {
       update: { watchedAt: new Date() },
     });
     return { message: 'Watch recorded' };
+  }
+
+  async getChapters(videoId: string) {
+    const video = await this.prisma.video.findUnique({ where: { id: videoId } });
+    if (!video) throw new NotFoundException('Video not found');
+
+    return this.prisma.videoChapter.findMany({
+      where: { videoId },
+      orderBy: { position: 'asc' },
+      select: { id: true, title: true, startTime: true, position: true },
+    });
+  }
+
+  async setChapters(videoId: string, userId: string, dto: SetChaptersDto) {
+    const video = await this.prisma.video.findUnique({ where: { id: videoId } });
+    if (!video) throw new NotFoundException('Video not found');
+    if (video.userId !== userId) throw new ForbiddenException('Not your video');
+
+    // Sort by startTime, assign positions, replace all existing chapters atomically
+    const sorted = [...dto.chapters].sort((a, b) => a.startTime - b.startTime);
+
+    await this.prisma.$transaction([
+      this.prisma.videoChapter.deleteMany({ where: { videoId } }),
+      this.prisma.videoChapter.createMany({
+        data: sorted.map((c, i) => ({
+          videoId,
+          title: c.title,
+          startTime: c.startTime,
+          position: i,
+        })),
+      }),
+    ]);
+
+    return this.getChapters(videoId);
   }
 }

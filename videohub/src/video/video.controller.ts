@@ -7,6 +7,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody
 import { VideoService } from './video.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
+import { SetChaptersDto } from './dto/set-chapters.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { multerStorage, videoFileFilter, MAX_FILE_SIZE } from './multer.config';
 
@@ -66,6 +67,26 @@ export class VideoController {
     @Request() req: { user: { userId: string } },
   ) {
     return this.videoService.recordWatch(id, req.user.userId);
+  }
+
+  @ApiOperation({ summary: 'Get chapters for a video' })
+  @ApiResponse({ status: 200, description: 'Returns list of chapters' })
+  @Get(':id/chapters')
+  getChapters(@Param('id') id: string) {
+    return this.videoService.getChapters(id);
+  }
+
+  @ApiOperation({ summary: 'Set chapters for a video (owner only) — replaces all existing' })
+  @ApiResponse({ status: 200, description: 'Returns updated chapter list' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/chapters')
+  setChapters(
+    @Param('id') id: string,
+    @Request() req: { user: { userId: string } },
+    @Body() dto: SetChaptersDto,
+  ) {
+    return this.videoService.setChapters(id, req.user.userId, dto);
   }
 
   @ApiOperation({ summary: 'Delete a video (owner only)' })

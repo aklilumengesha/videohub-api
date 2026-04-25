@@ -91,8 +91,7 @@ export interface Notification {
   actor: { id: string; name: string };
 }
 
-export interface Playlist {
-  id: string;
+export interface Playlist {  id: string;
   title: string;
   description?: string;
   isPublic: boolean;
@@ -112,6 +111,13 @@ export interface Playlist {
       user: { id: string; name: string };
     };
   }>;
+}
+
+export interface VideoChapter {
+  id: string;
+  title: string;
+  startTime: number;  // seconds
+  position: number;
 }
 
 // ── Auth API ──────────────────────────────────────────────────────────────────
@@ -211,6 +217,11 @@ export const videosApi = {
 
   recordWatch: (id: string) =>
     apiFetch(`/videos/${id}/watch`, { method: 'POST' }),
+
+  getChapters: (id: string) => apiFetch(`/videos/${id}/chapters`),
+
+  setChapters: (id: string, chapters: Array<{ title: string; startTime: number }>) =>
+    apiFetch(`/videos/${id}/chapters`, { method: 'POST', body: JSON.stringify({ chapters }) }),
 };
 
 // ── Likes API ─────────────────────────────────────────────────────────────────
