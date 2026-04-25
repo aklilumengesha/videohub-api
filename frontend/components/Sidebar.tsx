@@ -9,10 +9,10 @@ interface SidebarProps {
 }
 
 const NAV_ITEMS = [
-  { href: '/',              icon: '🏠', label: 'Home' },
-  { href: '/feed',          icon: '📺', label: 'Feed',          authRequired: true },
-  { href: '/feed/explore',  icon: '🔥', label: 'Trending' },
-  { href: '/search',        icon: '🔍', label: 'Search' },
+  { href: '/',          icon: '🏠', label: 'Home' },
+  { href: '/feed',      icon: '📺', label: 'Feed',     authRequired: true },
+  { href: '/trending',  icon: '🔥', label: 'Trending' },
+  { href: '/search',    icon: '🔍', label: 'Search' },
 ];
 
 const LIBRARY_ITEMS = [

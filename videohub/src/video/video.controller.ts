@@ -18,8 +18,12 @@ export class VideoController {
   @ApiOperation({ summary: 'Get all videos, optionally filtered by category' })
   @ApiResponse({ status: 200, description: 'Returns list of all videos' })
   @Get()
-  findAll(@Query('category') category?: string) {
-    return this.videoService.findAll(category);
+  findAll(
+    @Query('category') category?: string,
+    @Query('sort') sort?: string,
+  ) {
+    const sortBy = sort === 'popular' ? 'popular' : 'newest';
+    return this.videoService.findAll(category, sortBy);
   }
 
   @ApiOperation({ summary: 'Get a single video by ID' })

@@ -148,7 +148,8 @@ export const usersApi = {
 // ── Videos API ────────────────────────────────────────────────────────────────
 
 export const videosApi = {
-  getAll: (category?: string) => apiFetch(`/videos${category ? `?category=${encodeURIComponent(category)}` : ''}`),
+  getAll: (category?: string, sort?: 'newest' | 'popular') =>
+    apiFetch(`/videos${category || sort ? `?${new URLSearchParams({ ...(category ? { category } : {}), ...(sort ? { sort } : {}) }).toString()}` : ''}`),
 
   getOne: (id: string) => apiFetch(`/videos/${id}`),
 

@@ -38,7 +38,7 @@ export class VideoService implements OnModuleInit {
     });
   }
 
-  async findAll(category?: string) {
+  async findAll(category?: string, sortBy: 'newest' | 'popular' = 'newest') {
     return this.prisma.video.findMany({
       where: {
         status: 'READY',
@@ -58,7 +58,9 @@ export class VideoService implements OnModuleInit {
         createdAt: true,
         user: { select: { id: true, name: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: sortBy === 'popular'
+        ? { viewCount: 'desc' }
+        : { createdAt: 'desc' },
     });
   }
 

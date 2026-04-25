@@ -13,6 +13,7 @@ export default function HomePage() {
   const { isLoggedIn, loading } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [sort, setSort] = useState<'newest' | 'popular'>('newest');
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
 
@@ -20,7 +21,10 @@ export default function HomePage() {
     const fetchVideos = async () => {
       setFetching(true);
       try {
-        const data = await videosApi.getAll(activeCategory === 'All' ? undefined : activeCategory);
+        const data = await videosApi.getAll(
+          activeCategory === 'All' ? undefined : activeCategory,
+          sort,
+        );
         setVideos(data);
       } catch {
         setError('Failed to load videos');
@@ -29,7 +33,7 @@ export default function HomePage() {
       }
     };
     fetchVideos();
-  }, [activeCategory]);
+  }, [activeCategory, sort]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -59,7 +63,19 @@ export default function HomePage() {
           <h1 className="text-xl font-bold text-gray-900">
             {activeCategory === 'All' ? 'All Videos' : activeCategory}
           </h1>
-          <span className="text-sm text-gray-500">{videos.length} videos</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">{videos.length} videos</span>
+            <div className="flex bg-gray-100 rounded-lg p-0.5 ml-2">
+              <button onClick={() => setSort('newest')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${sort === 'newest' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                New
+              </button>
+              <button onClick={() => setSort('popular')}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${sort === 'popular' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                Popular
+              </button>
+            </div>
+          </div>
         </div>
 
         {error && (
