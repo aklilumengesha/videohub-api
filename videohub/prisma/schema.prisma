@@ -15,6 +15,7 @@ model User {
   refreshToken String?
   bio          String?
   avatarUrl    String?  // path to uploaded avatar image
+  isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -27,6 +28,7 @@ model User {
   sentNotifications   Notification[] @relation("actor")
   watchHistory        WatchHistory[]
   playlists           Playlist[]
+  reports             VideoReport[]
 }
 
 model Video {
@@ -54,6 +56,7 @@ model Video {
   playlists    PlaylistVideo[]
   chapters     VideoChapter[]
   subtitles    VideoSubtitle[]
+  reports      VideoReport[]
 
   @@index([title])
   @@index([userId])
@@ -195,4 +198,37 @@ model VideoSubtitle {
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@index([videoId])
+}
+
+model VideoReport {
+  id        String       @id @default(uuid())
+  videoId   String
+  userId    String       // who reported
+  reason    ReportReason
+  details   String?      // optional extra context
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId],  references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])  // one report per user per video
+  @@index([status])            // fast "get pending reports"
+  @@index([videoId])
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  MISINFORMATION
+  INAPPROPRIATE_CONTENT
+  COPYRIGHT
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
 }

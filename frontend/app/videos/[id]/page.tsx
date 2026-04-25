@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { videosApi, likesApi, commentsApi, playlistsApi, type Video, type Comment, type Playlist, type VideoChapter, type VideoSubtitle } from '@/lib/api';
+import { videosApi, likesApi, commentsApi, playlistsApi, adminApi, type Video, type Comment, type Playlist, type VideoChapter, type VideoSubtitle } from '@/lib/api';
 import HlsPlayer from '@/components/HlsPlayer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -44,6 +44,11 @@ export default function VideoPage() {
 
   // Subtitles
   const [subtitles, setSubtitles] = useState<VideoSubtitle[]>([]);
+
+  // Report
+  const [showReportMenu, setShowReportMenu] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const [reportDone, setReportDone] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -125,6 +130,16 @@ export default function VideoPage() {
     if (el) { el.currentTime = seconds; el.play().catch(() => {}); }
   };
 
+  const handleReport = async (reason: string) => {
+    if (!isLoggedIn) { router.push('/auth/login'); return; }
+    setReporting(true);
+    try {
+      await adminApi.reportVideo(id, reason);
+      setReportDone(true);
+    } catch { /* already reported or error — ignore */ }
+    finally { setReporting(false); setShowReportMenu(false); }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>;
 
   if (error || !video) return (
@@ -184,8 +199,7 @@ export default function VideoPage() {
                   <button onClick={openPlaylistMenu}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
                     📋 Save
-                  </button>
-                  {showPlaylistMenu && (
+                  </button>                  {showPlaylistMenu && (
                     <div className="absolute right-0 top-10 z-20 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[200px] py-2">
                       {playlists.length === 0 ? (
                         <div className="px-4 py-3 text-sm text-gray-400 text-center">
@@ -206,6 +220,29 @@ export default function VideoPage() {
                           + New playlist
                         </Link>
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Report button */}
+                <div className="relative ml-auto">
+                  {reportDone ? (
+                    <span className="text-xs text-green-600 font-medium">✓ Reported</span>
+                  ) : (
+                    <button onClick={() => setShowReportMenu(v => !v)}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50">
+                      ⚑ Report
+                    </button>
+                  )}
+                  {showReportMenu && (
+                    <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[180px] py-2">
+                      <p className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">Report reason</p>
+                      {['SPAM', 'HARASSMENT', 'MISINFORMATION', 'INAPPROPRIATE_CONTENT', 'COPYRIGHT', 'OTHER'].map(r => (
+                        <button key={r} onClick={() => handleReport(r)} disabled={reporting}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors capitalize">
+                          {r.replace(/_/g, ' ').toLowerCase()}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>

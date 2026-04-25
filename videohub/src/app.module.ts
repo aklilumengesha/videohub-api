@@ -18,6 +18,7 @@ import { SearchModule } from './search/search.module';
 import { NotificationModule } from './notification/notification.module';
 import { HealthModule } from './health/health.module';
 import { PlaylistModule } from './playlist/playlist.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { PlaylistModule } from './playlist/playlist.module';
     NotificationModule,
     HealthModule,
     PlaylistModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

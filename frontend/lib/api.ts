@@ -290,8 +290,22 @@ export const searchApi = {
     apiFetch(`/search/users?q=${encodeURIComponent(q)}${cursor ? `&cursor=${cursor}` : ''}`),
 };
 
-// ── Playlists API ─────────────────────────────────────────────────────────────
+// ── Admin / Reports API ───────────────────────────────────────────────────────
 
+export const adminApi = {
+  reportVideo: (videoId: string, reason: string, details?: string) =>
+    apiFetch(`/videos/${videoId}/report`, { method: 'POST', body: JSON.stringify({ reason, details }) }),
+
+  getStats: () => apiFetch('/admin/stats'),
+
+  getReports: (status?: string) =>
+    apiFetch(`/admin/reports${status ? `?status=${status}` : ''}`),
+
+  resolveReport: (reportId: string, status: 'RESOLVED' | 'DISMISSED') =>
+    apiFetch(`/admin/reports/${reportId}`, { method: 'PUT', body: JSON.stringify({ status }) }),
+};
+
+// ── Playlists API ─────────────────────────────────────────────────────────────
 export const playlistsApi = {
   create: (data: { title: string; description?: string; isPublic?: boolean }) =>
     apiFetch('/playlists', { method: 'POST', body: JSON.stringify(data) }),
