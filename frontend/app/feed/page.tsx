@@ -5,38 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { feedApi, type Video } from '@/lib/api';
-
-function VideoCard({ video }: { video: Video }) {
-  return (
-    <Link
-      href={`/videos/${video.id}`}
-      className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col"
-    >
-      <div className="h-40 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-        <span className="text-4xl">🎥</span>
-      </div>
-      <div className="p-4 flex-1">
-        <h3 className="font-semibold text-gray-900 truncate mb-1">{video.title}</h3>
-        {video.description && (
-          <p className="text-sm text-gray-500 line-clamp-2 mb-2">{video.description}</p>
-        )}
-        <div className="flex items-center justify-between text-xs text-gray-400 mt-auto">
-          <Link
-            href={`/profile/${video.user.id}`}
-            onClick={e => e.stopPropagation()}
-            className="hover:text-blue-600 font-medium"
-          >
-            {video.user.name}
-          </Link>
-          <div className="flex items-center gap-2">
-            <span>❤️ {video.likeCount}</span>
-            <span>💬 {video.commentCount}</span>
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-}
+import VideoCard from '@/components/VideoCard';
 
 export default function FeedPage() {
   const router = useRouter();

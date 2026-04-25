@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { usersApi, type User, type Video } from '@/lib/api';
+import VideoCard from '@/components/VideoCard';
 
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -122,23 +123,7 @@ export default function ProfilePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {videos.map(video => (
-                <Link
-                  key={video.id}
-                  href={`/videos/${video.id}`}
-                  className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
-                >
-                  <div className="h-36 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                    <span className="text-3xl">🎥</span>
-                  </div>
-                  <div className="p-3">
-                    <h3 className="font-medium text-gray-900 truncate text-sm">{video.title}</h3>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                      <span>❤️ {video.likeCount}</span>
-                      <span>💬 {video.commentCount}</span>
-                      <span className="ml-auto">{new Date(video.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </Link>
+                <VideoCard key={video.id} video={video} showChannel={false} />
               ))}
             </div>
           )}

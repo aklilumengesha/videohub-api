@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { searchApi, type Video, type User } from '@/lib/api';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 type Tab = 'videos' | 'users';
 
@@ -118,10 +121,23 @@ export default function SearchPage() {
                         <Link
                           key={video.id}
                           href={`/videos/${video.id}`}
-                          className="flex gap-4 bg-white rounded-xl p-4 hover:shadow-md transition-shadow border border-gray-100"
+                          className="flex gap-4 bg-white rounded-xl p-3 hover:shadow-md transition-shadow border border-gray-100"
                         >
-                          <div className="w-24 h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <span className="text-2xl">🎥</span>
+                          {/* Thumbnail */}
+                          <div className="relative w-32 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-900">
+                            {video.thumbnailUrl ? (
+                              <Image
+                                src={`${API_URL}/${video.thumbnailUrl}`}
+                                alt={video.title}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
+                                <span className="text-2xl opacity-60">🎥</span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-gray-900 truncate">{video.title}</h3>

@@ -8,15 +8,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { videosApi } from '@/lib/api';
-
-interface Video {
-  id: string;
-  title: string;
-  description?: string;
-  filePath: string;
-  createdAt: string;
-  user: { id: string; name: string };
-}
+import VideoCard from '@/components/VideoCard';
+import type { Video } from '@/lib/api';
 
 export default function HomePage() {
   const { isLoggedIn, logout, loading } = useAuth();
@@ -96,22 +89,7 @@ export default function HomePage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {videos.map((video) => (
-              <Link key={video.id} href={`/videos/${video.id}`} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
-                {/* Video thumbnail placeholder */}
-                <div className="h-40 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                  <span className="text-4xl">🎥</span>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-1 truncate">{video.title}</h3>
-                  {video.description && (
-                    <p className="text-sm text-gray-500 mb-2 line-clamp-2">{video.description}</p>
-                  )}
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>by {video.user?.name || 'Unknown'}</span>
-                    <span>{new Date(video.createdAt).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </Link>
+              <VideoCard key={video.id} video={video} />
             ))}
           </div>
         )}
