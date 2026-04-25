@@ -11,7 +11,7 @@ import { VIDEO_PROCESSING_QUEUE } from './video.constants';
 
 @Injectable()
 export class VideoService implements OnModuleInit {
-  private redis: Redis;
+  private redis!: Redis;
 
   constructor(
     private prisma: PrismaService,

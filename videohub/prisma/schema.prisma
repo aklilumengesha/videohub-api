@@ -39,6 +39,8 @@ model Video {
   viewCount    Int         @default(0)
   status       VideoStatus @default(PROCESSING)
   duration     Int?        // seconds
+  category     String?     // e.g. "Gaming", "Music", "Education"
+  tags         String[]    // e.g. ["tutorial", "react", "typescript"]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -50,6 +52,7 @@ model Video {
   @@index([userId])
   @@index([status])
   @@index([viewCount])  // fast "most viewed" queries
+  @@index([category])   // fast "filter by category" queries
 }
 
 enum VideoStatus {
