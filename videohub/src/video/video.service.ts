@@ -176,6 +176,33 @@ export class VideoService implements OnModuleInit {
     };
   }
 
+  async getTrending(limit = 20) {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    return this.prisma.video.findMany({
+      where: {
+        status: 'READY',
+        createdAt: { gte: sevenDaysAgo },
+      },
+      take: limit,
+      orderBy: { viewCount: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        thumbnailUrl: true,
+        hlsUrl: true,
+        likeCount: true,
+        commentCount: true,
+        viewCount: true,
+        duration: true,
+        status: true,
+        createdAt: true,
+        user: { select: { id: true, name: true } },
+      },
+    });
+  }
+
   async getRelated(id: string, limit = 8) {
     // Get the current video to find its creator
     const current = await this.prisma.video.findUnique({

@@ -30,6 +30,13 @@ export class VideoController {
     return this.videoService.findOne(id, ip);
   }
 
+  @ApiOperation({ summary: 'Get trending videos — most viewed in the last 7 days' })
+  @ApiResponse({ status: 200, description: 'Returns trending videos' })
+  @Get('trending')
+  getTrending() {
+    return this.videoService.getTrending();
+  }
+
   @ApiOperation({ summary: 'Get related videos for a video' })
   @ApiResponse({ status: 200, description: 'Returns list of related videos' })
   @Get(':id/related')
