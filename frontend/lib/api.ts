@@ -152,6 +152,8 @@ export const videosApi = {
 
   getOne: (id: string) => apiFetch(`/videos/${id}`),
 
+  getRelated: (id: string) => apiFetch(`/videos/${id}/related`),
+
   getStatus: (id: string) => apiFetch(`/videos/${id}/status`),
 
   upload: (title: string, description: string, file: File) => {

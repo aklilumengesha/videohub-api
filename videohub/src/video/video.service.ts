@@ -172,6 +172,39 @@ export class VideoService implements OnModuleInit {
     };
   }
 
+  async getRelated(id: string, limit = 8) {
+    // Get the current video to find its creator
+    const current = await this.prisma.video.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (!current) throw new NotFoundException('Video not found');
+
+    // Return other READY videos — prioritise same creator, then recent
+    return this.prisma.video.findMany({
+      where: {
+        id: { not: id },       // exclude current video
+        status: 'READY',
+      },
+      take: limit,
+      orderBy: [
+        // Videos from the same creator come first
+        { userId: current.userId ? 'asc' : 'desc' },
+        { createdAt: 'desc' },
+      ],
+      select: {
+        id: true,
+        title: true,
+        thumbnailUrl: true,
+        duration: true,
+        viewCount: true,
+        createdAt: true,
+        user: { select: { id: true, name: true } },
+      },
+    });
+  }
+
   async getStatus(id: string) {
     const video = await this.prisma.video.findUnique({
       where: { id },

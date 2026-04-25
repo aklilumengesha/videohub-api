@@ -30,6 +30,13 @@ export class VideoController {
     return this.videoService.findOne(id, ip);
   }
 
+  @ApiOperation({ summary: 'Get related videos for a video' })
+  @ApiResponse({ status: 200, description: 'Returns list of related videos' })
+  @Get(':id/related')
+  getRelated(@Param('id') id: string) {
+    return this.videoService.getRelated(id);
+  }
+
   @ApiOperation({ summary: 'Get video processing status' })
   @ApiResponse({ status: 200, description: 'Returns video id, title, status and filePath' })
   @ApiResponse({ status: 404, description: 'Video not found' })
