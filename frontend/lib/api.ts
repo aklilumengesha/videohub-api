@@ -91,6 +91,29 @@ export interface Notification {
   actor: { id: string; name: string };
 }
 
+export interface Playlist {
+  id: string;
+  title: string;
+  description?: string;
+  isPublic: boolean;
+  createdAt: string;
+  _count?: { videos: number };
+  user?: { id: string; name: string };
+  videos?: Array<{
+    position: number;
+    addedAt: string;
+    video: {
+      id: string;
+      title: string;
+      thumbnailUrl?: string;
+      duration?: number;
+      viewCount: number;
+      createdAt: string;
+      user: { id: string; name: string };
+    };
+  }>;
+}
+
 // ── Auth API ──────────────────────────────────────────────────────────────────
 
 export const authApi = {
@@ -236,10 +259,29 @@ export const searchApi = {
     apiFetch(`/search/users?q=${encodeURIComponent(q)}${cursor ? `&cursor=${cursor}` : ''}`),
 };
 
+// ── Playlists API ─────────────────────────────────────────────────────────────
+
+export const playlistsApi = {
+  create: (data: { title: string; description?: string; isPublic?: boolean }) =>
+    apiFetch('/playlists', { method: 'POST', body: JSON.stringify(data) }),
+
+  getMine: () => apiFetch('/playlists/me'),
+
+  getOne: (id: string) => apiFetch(`/playlists/${id}`),
+
+  addVideo: (playlistId: string, videoId: string) =>
+    apiFetch(`/playlists/${playlistId}/videos/${videoId}`, { method: 'POST' }),
+
+  removeVideo: (playlistId: string, videoId: string) =>
+    apiFetch(`/playlists/${playlistId}/videos/${videoId}`, { method: 'DELETE' }),
+
+  delete: (id: string) =>
+    apiFetch(`/playlists/${id}`, { method: 'DELETE' }),
+};
+
 // ── Notifications API ─────────────────────────────────────────────────────────
 
-export const notificationsApi = {
-  getAll: (cursor?: string) =>
+export const notificationsApi = {  getAll: (cursor?: string) =>
     apiFetch(`/notifications${cursor ? `?cursor=${cursor}` : ''}`),
 
   getUnreadCount: () => apiFetch('/notifications/unread-count'),

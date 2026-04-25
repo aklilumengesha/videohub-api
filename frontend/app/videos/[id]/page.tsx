@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { videosApi, likesApi, commentsApi, type Video, type Comment } from '@/lib/api';
+import { videosApi, likesApi, commentsApi, playlistsApi, type Video, type Comment, type Playlist } from '@/lib/api';
 import HlsPlayer from '@/components/HlsPlayer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -31,6 +31,12 @@ export default function VideoPage() {
   const [commentLoading, setCommentLoading] = useState(false);
   const [error, setError] = useState('');
   const commentInputRef = useRef<HTMLInputElement>(null);
+
+  // Save to playlist
+  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
+  const [savingTo, setSavingTo] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -84,6 +90,24 @@ export default function VideoPage() {
     } catch { /* ignore */ }
   };
 
+  const openPlaylistMenu = async () => {
+    if (!isLoggedIn) { router.push('/auth/login'); return; }
+    setShowPlaylistMenu(v => !v);
+    if (!playlistsLoaded) {
+      const data: Playlist[] = await playlistsApi.getMine().catch(() => []);
+      setPlaylists(data);
+      setPlaylistsLoaded(true);
+    }
+  };
+
+  const handleSaveToPlaylist = async (playlistId: string) => {
+    setSavingTo(playlistId);
+    try {
+      await playlistsApi.addVideo(playlistId, id);
+    } catch { /* already in playlist — ignore */ }
+    finally { setSavingTo(null); setShowPlaylistMenu(false); }
+  };
+
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>;
 
   if (error || !video) return (
@@ -133,6 +157,36 @@ export default function VideoPage() {
                 <button onClick={handleLike} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${liked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500'}`}>
                   {liked ? '❤️' : '🤍'} {likeCount}
                 </button>
+                {/* Save to playlist */}
+                <div className="relative">
+                  <button onClick={openPlaylistMenu}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                    📋 Save
+                  </button>
+                  {showPlaylistMenu && (
+                    <div className="absolute right-0 top-10 z-20 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[200px] py-2">
+                      {playlists.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-400 text-center">
+                          No playlists yet.{' '}
+                          <Link href="/playlists" className="text-blue-600 hover:underline">Create one</Link>
+                        </div>
+                      ) : (
+                        playlists.map(pl => (
+                          <button key={pl.id} onClick={() => handleSaveToPlaylist(pl.id)}
+                            disabled={savingTo === pl.id}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
+                            {savingTo === pl.id ? 'Saving...' : pl.title}
+                          </button>
+                        ))
+                      )}
+                      <div className="border-t border-gray-100 mt-1 pt-1">
+                        <Link href="/playlists" className="block px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors">
+                          + New playlist
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
