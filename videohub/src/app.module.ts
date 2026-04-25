@@ -20,6 +20,7 @@ import { HealthModule } from './health/health.module';
 import { PlaylistModule } from './playlist/playlist.module';
 import { AdminModule } from './admin/admin.module';
 import { SseModule } from './sse/sse.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { SseModule } from './sse/sse.module';
     PlaylistModule,
     AdminModule,
     SseModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

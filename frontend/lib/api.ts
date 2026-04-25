@@ -290,6 +290,15 @@ export const searchApi = {
     apiFetch(`/search/users?q=${encodeURIComponent(q)}${cursor ? `&cursor=${cursor}` : ''}`),
 };
 
+// ── Analytics API ─────────────────────────────────────────────────────────────
+
+export const analyticsApi = {
+  getOverview: () => apiFetch('/analytics/overview'),
+  getVideoStats: () => apiFetch('/analytics/videos'),
+  getDailyViews: (days = 30) => apiFetch(`/analytics/views?days=${days}`),
+  getTopVideo: () => apiFetch('/analytics/top-video'),
+};
+
 // ── Admin / Reports API ───────────────────────────────────────────────────────
 
 export const adminApi = {
