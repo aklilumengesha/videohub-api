@@ -18,11 +18,18 @@ export class VideoService {
 
   async findAll() {
     return this.prisma.video.findMany({
+      where: { status: 'READY' },
       select: {
         id: true,
         title: true,
         description: true,
-        filePath: true,
+        thumbnailUrl: true,
+        hlsUrl: true,
+        likeCount: true,
+        commentCount: true,
+        viewCount: true,
+        duration: true,
+        status: true,
         createdAt: true,
         user: { select: { id: true, name: true } },
       },
@@ -38,6 +45,13 @@ export class VideoService {
         title: true,
         description: true,
         filePath: true,
+        hlsUrl: true,
+        thumbnailUrl: true,
+        likeCount: true,
+        commentCount: true,
+        viewCount: true,
+        duration: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
         user: { select: { id: true, name: true } },

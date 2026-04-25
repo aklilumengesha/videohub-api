@@ -22,34 +22,58 @@ export class VideoProcessor {
   @Process('compress')
   async handleCompress(job: Job<VideoJobData>) {
     const { videoId, filePath } = job.data;
-    this.logger.log(`Processing video ${videoId} from ${filePath}`);
+    this.logger.log(`Processing video ${videoId}`);
 
     try {
-      // Run FFmpeg compression in the background
-      const compressedPath = await this.ffmpeg.compress(filePath);
+      // Step 1 — Extract thumbnail (fast, do first so UI shows something quickly)
+      let thumbnailUrl: string | null = null;
+      try {
+        thumbnailUrl = await this.ffmpeg.extractThumbnail(filePath, videoId);
+        this.logger.log(`Thumbnail ready: ${thumbnailUrl}`);
 
-      // Update video record to READY with the compressed file path
+        // Update thumbnail immediately so the UI can show it while encoding continues
+        await this.prisma.video.update({
+          where: { id: videoId },
+          data: { thumbnailUrl },
+        });
+      } catch (thumbErr) {
+        this.logger.warn(`Thumbnail extraction failed: ${(thumbErr as Error).message}`);
+      }
+
+      // Step 2 — Get video duration
+      let duration: number | null = null;
+      try {
+        duration = await this.ffmpeg.getDuration(filePath);
+      } catch {
+        // non-fatal — duration is optional
+      }
+
+      // Step 3 — HLS multi-quality encoding (the main work)
+      const { masterPlaylistPath } = await this.ffmpeg.encodeHls(filePath, videoId);
+
+      // Step 4 — Mark video as READY with all metadata
       await this.prisma.video.update({
         where: { id: videoId },
         data: {
-          filePath: compressedPath,
+          hlsUrl: masterPlaylistPath,
+          thumbnailUrl: thumbnailUrl ?? undefined,
+          duration: duration ?? undefined,
           status: 'READY',
         },
       });
 
-      this.logger.log(`Video ${videoId} processing complete: ${compressedPath}`);
-      return { videoId, compressedPath };
+      this.logger.log(`Video ${videoId} processing complete`);
+      return { videoId, masterPlaylistPath };
+
     } catch (error) {
       this.logger.error(`Video ${videoId} processing failed: ${(error as Error).message}`);
 
-      // Mark video as FAILED so the client can show an error state
       await this.prisma.video.update({
         where: { id: videoId },
         data: { status: 'FAILED' },
       });
 
-      // Re-throw so BullMQ marks the job as failed and can retry
-      throw error;
+      throw error; // re-throw so BullMQ marks job as failed and can retry
     }
   }
 }

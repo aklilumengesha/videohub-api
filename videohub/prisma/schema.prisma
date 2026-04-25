@@ -30,10 +30,13 @@ model Video {
   id           String      @id @default(uuid())
   title        String
   description  String?
-  filePath     String?
+  filePath     String?     // original uploaded file path
+  hlsUrl       String?     // path to master.m3u8 for adaptive streaming
+  thumbnailUrl String?     // path to generated JPEG thumbnail
   userId       String
   likeCount    Int         @default(0)
   commentCount Int         @default(0)
+  viewCount    Int         @default(0)
   status       VideoStatus @default(PROCESSING)
   duration     Int?        // seconds
   createdAt    DateTime    @default(now())
@@ -46,6 +49,7 @@ model Video {
   @@index([title])
   @@index([userId])
   @@index([status])
+  @@index([viewCount])  // fast "most viewed" queries
 }
 
 enum VideoStatus {
