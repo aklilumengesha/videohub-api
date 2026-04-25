@@ -1,4 +1,4 @@
-import { Controller, Get, Put, Post, Body, UseGuards, Request, Param, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator } from '@nestjs/common';
+import { Controller, Get, Put, Post, Delete, Body, UseGuards, Request, Param, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
@@ -80,5 +80,27 @@ export class UserController {
   @Get(':id/videos')
   getUserVideos(@Param('id') id: string) {
     return this.userService.getUserVideos(id);
+  }
+
+  @ApiOperation({ summary: 'Get watch history for current user' })
+  @ApiResponse({ status: 200, description: 'Returns paginated watch history' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/history')
+  getHistory(
+    @Request() req: { user: { userId: string } },
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.userService.getHistory(req.user.userId, cursor, limit ? parseInt(limit) : 20);
+  }
+
+  @ApiOperation({ summary: 'Clear all watch history for current user' })
+  @ApiResponse({ status: 200, description: 'History cleared' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('me/history')
+  clearHistory(@Request() req: { user: { userId: string } }) {
+    return this.userService.clearHistory(req.user.userId);
   }
 }

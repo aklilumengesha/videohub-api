@@ -246,4 +246,14 @@ export class VideoService implements OnModuleInit {
     if (!video) throw new NotFoundException('Video not found');
     return video;
   }
+
+  async recordWatch(videoId: string, userId: string) {
+    // Upsert — creates entry or updates watchedAt if already exists
+    await this.prisma.watchHistory.upsert({
+      where: { userId_videoId: { userId, videoId } },
+      create: { userId, videoId },
+      update: { watchedAt: new Date() },
+    });
+    return { message: 'Watch recorded' };
+  }
 }

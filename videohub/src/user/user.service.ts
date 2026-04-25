@@ -85,4 +85,38 @@ export class UserService {
 
     return user;
   }
+
+  async getHistory(userId: string, cursor?: string, limit = 20) {
+    const items = await this.prisma.watchHistory.findMany({
+      where: { userId },
+      take: limit + 1,
+      ...(cursor ? { skip: 1, cursor: { userId_videoId: { userId, videoId: cursor } } } : {}),
+      orderBy: { watchedAt: 'desc' },
+      select: {
+        watchedAt: true,
+        video: {
+          select: {
+            id: true,
+            title: true,
+            thumbnailUrl: true,
+            duration: true,
+            viewCount: true,
+            createdAt: true,
+            user: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    const hasMore = items.length > limit;
+    const data = hasMore ? items.slice(0, limit) : items;
+    const nextCursor = hasMore ? data[data.length - 1].video.id : null;
+
+    return { items: data, nextCursor };
+  }
+
+  async clearHistory(userId: string) {
+    await this.prisma.watchHistory.deleteMany({ where: { userId } });
+    return { message: 'Watch history cleared' };
+  }
 }

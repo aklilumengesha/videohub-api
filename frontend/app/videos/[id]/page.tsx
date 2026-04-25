@@ -44,6 +44,8 @@ export default function VideoPage() {
         setLikeCount(v.likeCount);
         setComments(c);
         setRelated(r);
+        // Record watch in history (fire-and-forget — only works if logged in)
+        videosApi.recordWatch(id).catch(() => {});
       } catch {
         setError('Video not found');
       } finally {

@@ -56,6 +56,18 @@ export class VideoController {
     return this.videoService.getStatus(id);
   }
 
+  @ApiOperation({ summary: 'Record a watch event for history (requires auth)' })
+  @ApiResponse({ status: 200, description: 'Watch recorded' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/watch')
+  recordWatch(
+    @Param('id') id: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.videoService.recordWatch(id, req.user.userId);
+  }
+
   @ApiOperation({ summary: 'Delete a video (owner only)' })
   @ApiResponse({ status: 200, description: 'Video deleted successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

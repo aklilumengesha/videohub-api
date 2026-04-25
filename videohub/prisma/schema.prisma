@@ -25,6 +25,7 @@ model User {
   followers           Follow[]       @relation("following")
   notifications       Notification[] @relation("recipient")
   sentNotifications   Notification[] @relation("actor")
+  watchHistory        WatchHistory[]
 }
 
 model Video {
@@ -48,6 +49,7 @@ model Video {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes    Like[]
   comments Comment[]
+  watchHistory WatchHistory[]
 
   @@index([title])
   @@index([userId])
@@ -125,4 +127,16 @@ enum NotificationType {
   NEW_FOLLOWER
   VIDEO_LIKED
   VIDEO_COMMENTED
+}
+
+model WatchHistory {
+  userId    String
+  videoId   String
+  watchedAt DateTime @default(now()) @updatedAt  // upsert updates this timestamp
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([userId, videoId])   // one entry per user per video — upserted on re-watch
+  @@index([userId])         // fast "get my history"
 }

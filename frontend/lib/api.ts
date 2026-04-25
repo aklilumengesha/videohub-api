@@ -145,6 +145,12 @@ export const usersApi = {
     return apiFetch('/users/me/avatar', { method: 'POST', body: formData });
   },
 
+  getHistory: (cursor?: string) =>
+    apiFetch(`/users/me/history${cursor ? `?cursor=${cursor}` : ''}`),
+
+  clearHistory: () =>
+    apiFetch('/users/me/history', { method: 'DELETE' }),
+
   getFollowers: (id: string, cursor?: string) =>
     apiFetch(`/users/${id}/followers${cursor ? `?cursor=${cursor}` : ''}`),
 
@@ -179,6 +185,9 @@ export const videosApi = {
 
   remove: (id: string) =>
     apiFetch(`/videos/${id}`, { method: 'DELETE' }),
+
+  recordWatch: (id: string) =>
+    apiFetch(`/videos/${id}/watch`, { method: 'POST' }),
 };
 
 // ── Likes API ─────────────────────────────────────────────────────────────────
