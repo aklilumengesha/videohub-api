@@ -53,6 +53,7 @@ model Video {
   watchHistory WatchHistory[]
   playlists    PlaylistVideo[]
   chapters     VideoChapter[]
+  subtitles    VideoSubtitle[]
 
   @@index([title])
   @@index([userId])
@@ -178,6 +179,18 @@ model VideoChapter {
   title     String
   startTime Int    // seconds from start
   position  Int    // display order
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([videoId])
+}
+
+model VideoSubtitle {
+  id       String @id @default(uuid())
+  videoId  String
+  language String  // BCP-47 code e.g. "en", "fr", "ar"
+  label    String  // display name e.g. "English", "Français"
+  filePath String  // path to .vtt file
 
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 

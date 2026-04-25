@@ -8,6 +8,7 @@ import { FfmpegService } from './ffmpeg.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { SetChaptersDto } from './dto/set-chapters.dto';
+import { UploadSubtitleDto } from './dto/upload-subtitle.dto';
 import { VIDEO_PROCESSING_QUEUE } from './video.constants';
 
 @Injectable()
@@ -290,5 +291,35 @@ export class VideoService implements OnModuleInit {
     ]);
 
     return this.getChapters(videoId);
+  }
+
+  async getSubtitles(videoId: string) {
+    const video = await this.prisma.video.findUnique({ where: { id: videoId } });
+    if (!video) throw new NotFoundException('Video not found');
+
+    return this.prisma.videoSubtitle.findMany({
+      where: { videoId },
+      select: { id: true, language: true, label: true, filePath: true },
+    });
+  }
+
+  async addSubtitle(videoId: string, userId: string, dto: UploadSubtitleDto, filePath: string) {
+    const video = await this.prisma.video.findUnique({ where: { id: videoId } });
+    if (!video) throw new NotFoundException('Video not found');
+    if (video.userId !== userId) throw new ForbiddenException('Not your video');
+
+    return this.prisma.videoSubtitle.create({
+      data: { videoId, language: dto.language, label: dto.label, filePath },
+      select: { id: true, language: true, label: true, filePath: true },
+    });
+  }
+
+  async removeSubtitle(videoId: string, subtitleId: string, userId: string) {
+    const video = await this.prisma.video.findUnique({ where: { id: videoId } });
+    if (!video) throw new NotFoundException('Video not found');
+    if (video.userId !== userId) throw new ForbiddenException('Not your video');
+
+    await this.prisma.videoSubtitle.deleteMany({ where: { id: subtitleId, videoId } });
+    return { message: 'Subtitle removed' };
   }
 }

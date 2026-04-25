@@ -120,6 +120,13 @@ export interface VideoChapter {
   position: number;
 }
 
+export interface VideoSubtitle {
+  id: string;
+  language: string;  // BCP-47 e.g. "en"
+  label: string;     // display name e.g. "English"
+  filePath: string;
+}
+
 // ── Auth API ──────────────────────────────────────────────────────────────────
 
 export const authApi = {
@@ -222,6 +229,19 @@ export const videosApi = {
 
   setChapters: (id: string, chapters: Array<{ title: string; startTime: number }>) =>
     apiFetch(`/videos/${id}/chapters`, { method: 'POST', body: JSON.stringify({ chapters }) }),
+
+  getSubtitles: (id: string) => apiFetch(`/videos/${id}/subtitles`),
+
+  addSubtitle: (id: string, language: string, label: string, file: File) => {
+    const formData = new FormData();
+    formData.append('language', language);
+    formData.append('label', label);
+    formData.append('file', file);
+    return apiFetch(`/videos/${id}/subtitles`, { method: 'POST', body: formData });
+  },
+
+  removeSubtitle: (videoId: string, subtitleId: string) =>
+    apiFetch(`/videos/${videoId}/subtitles/${subtitleId}`, { method: 'DELETE' }),
 };
 
 // ── Likes API ─────────────────────────────────────────────────────────────────

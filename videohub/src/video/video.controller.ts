@@ -4,10 +4,14 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { mkdirSync } from 'fs';
 import { VideoService } from './video.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { SetChaptersDto } from './dto/set-chapters.dto';
+import { UploadSubtitleDto } from './dto/upload-subtitle.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { multerStorage, videoFileFilter, MAX_FILE_SIZE } from './multer.config';
 
@@ -87,6 +91,55 @@ export class VideoController {
     @Body() dto: SetChaptersDto,
   ) {
     return this.videoService.setChapters(id, req.user.userId, dto);
+  }
+
+  @ApiOperation({ summary: 'Get subtitles for a video' })
+  @ApiResponse({ status: 200, description: 'Returns list of subtitle tracks' })
+  @Get(':id/subtitles')
+  getSubtitles(@Param('id') id: string) {
+    return this.videoService.getSubtitles(id);
+  }
+
+  @ApiOperation({ summary: 'Upload a VTT subtitle file for a video (owner only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: (_req, _file, cb) => {
+        const dir = join('uploads', 'subtitles');
+        mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+      },
+      filename: (_req, file, cb) => {
+        cb(null, `${Date.now()}${extname(file.originalname)}`);
+      },
+    }),
+    fileFilter: (_req, file, cb) => {
+      cb(null, file.originalname.endsWith('.vtt') || file.mimetype === 'text/vtt');
+    },
+  }))
+  @Post(':id/subtitles')
+  addSubtitle(
+    @Param('id') id: string,
+    @Request() req: { user: { userId: string } },
+    @Body() dto: UploadSubtitleDto,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.videoService.addSubtitle(id, req.user.userId, dto, file.path);
+  }
+
+  @ApiOperation({ summary: 'Remove a subtitle track (owner only)' })
+  @ApiResponse({ status: 200, description: 'Subtitle removed' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/subtitles/:subtitleId')
+  removeSubtitle(
+    @Param('id') id: string,
+    @Param('subtitleId') subtitleId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.videoService.removeSubtitle(id, subtitleId, req.user.userId);
   }
 
   @ApiOperation({ summary: 'Delete a video (owner only)' })

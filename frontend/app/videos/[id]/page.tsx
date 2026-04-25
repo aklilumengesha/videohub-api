@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { videosApi, likesApi, commentsApi, playlistsApi, type Video, type Comment, type Playlist, type VideoChapter } from '@/lib/api';
+import { videosApi, likesApi, commentsApi, playlistsApi, type Video, type Comment, type Playlist, type VideoChapter, type VideoSubtitle } from '@/lib/api';
 import HlsPlayer from '@/components/HlsPlayer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -42,6 +42,9 @@ export default function VideoPage() {
   const [chapters, setChapters] = useState<VideoChapter[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Subtitles
+  const [subtitles, setSubtitles] = useState<VideoSubtitle[]>([]);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -56,6 +59,8 @@ export default function VideoPage() {
         setRelated(r);
         // Load chapters (non-blocking)
         videosApi.getChapters(id).then((ch: VideoChapter[]) => setChapters(ch)).catch(() => {});
+        // Load subtitles (non-blocking)
+        videosApi.getSubtitles(id).then((s: VideoSubtitle[]) => setSubtitles(s)).catch(() => {});
         // Record watch in history (fire-and-forget — only works if logged in)
         videosApi.recordWatch(id).catch(() => {});
       } catch {
@@ -148,10 +153,16 @@ export default function VideoPage() {
                   hlsUrl={`${API_URL}/${video.hlsUrl}`}
                   fallbackUrl={video.filePath ? `${API_URL}/${video.filePath}` : undefined}
                   poster={video.thumbnailUrl ? `${API_URL}/${video.thumbnailUrl}` : undefined}
+                  subtitles={subtitles}
                   className="rounded-xl aspect-video"
                 />
               ) : video.filePath ? (
-                <video src={`${API_URL}/${video.filePath}`} controls className="w-full h-full" preload="metadata" />
+                <video src={`${API_URL}/${video.filePath}`} controls className="w-full h-full" preload="metadata">
+                  {subtitles.map((sub, i) => (
+                    <track key={sub.id} kind="subtitles" src={`${API_URL}/${sub.filePath}`}
+                      srcLang={sub.language} label={sub.label} default={i === 0} />
+                  ))}
+                </video>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-gray-400"><span className="text-4xl">🎬</span></div>
               )}
@@ -219,6 +230,22 @@ export default function VideoPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Subtitles panel */}
+            {subtitles.length > 0 && (
+              <div className="bg-white rounded-xl p-4">
+                <h2 className="font-semibold text-gray-900 mb-3">Subtitles / CC</h2>
+                <div className="flex flex-wrap gap-2">
+                  {subtitles.map(sub => (
+                    <span key={sub.id}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+                      🗣 {sub.label}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">Enable captions in the video player controls (CC button)</p>
               </div>
             )}
           </div>

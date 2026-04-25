@@ -9,6 +9,7 @@ interface HlsPlayerProps {
   className?: string;
   autoPlay?: boolean;
   onTimeUpdate?: (currentTime: number) => void;
+  subtitles?: Array<{ id: string; language: string; label: string; filePath: string }>;
 }
 
 export default function HlsPlayer({
@@ -18,6 +19,7 @@ export default function HlsPlayer({
   className = '',
   autoPlay = false,
   onTimeUpdate,
+  subtitles = [],
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [quality, setQuality] = useState<string>('auto');
@@ -119,7 +121,18 @@ export default function HlsPlayer({
         preload="metadata"
         onTimeUpdate={handleTimeUpdate}
         playsInline
-      />
+      >
+        {subtitles.map((sub, i) => (
+          <track
+            key={sub.id}
+            kind="subtitles"
+            src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/${sub.filePath}`}
+            srcLang={sub.language}
+            label={sub.label}
+            default={i === 0}
+          />
+        ))}
+      </video>
 
       {/* Quality selector — shown when multiple qualities are available */}
       {availableQualities.length > 1 && (
