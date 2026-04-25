@@ -46,9 +46,9 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   };
 
   return (
-    <aside className={`fixed left-0 top-14 bottom-0 z-40 bg-white transition-all duration-200 overflow-y-auto overflow-x-hidden ${
+    <aside className={`fixed left-0 top-14 bottom-0 z-40 transition-all duration-200 overflow-y-auto overflow-x-hidden border-r ${
       isOpen ? 'w-56' : 'w-16'
-    }`}>
+    }`} style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
       <div className="py-3 px-2 space-y-1">
         {NAV_ITEMS.map(renderItem)}
 
