@@ -2,106 +2,117 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { notificationsApi } from '@/lib/api';
 
-export default function Navbar() {
-  const pathname = usePathname();
+interface NavbarProps {
+  onMenuToggle?: () => void;
+}
+
+export default function Navbar({ onMenuToggle }: NavbarProps) {
+  const router = useRouter();
   const { isLoggedIn, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Poll unread count every 30 seconds when logged in
   useEffect(() => {
     if (!isLoggedIn) { setUnreadCount(0); return; }
-
     const fetch = () => {
       notificationsApi.getUnreadCount()
         .then(data => setUnreadCount(data.count ?? 0))
         .catch(() => {});
     };
-
     fetch();
     const interval = setInterval(fetch, 30000);
     return () => clearInterval(interval);
   }, [isLoggedIn]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
     setUnreadCount(0);
   };
 
-  const isActive = (path: string) =>
-    pathname === path ? 'text-blue-600 font-semibold' : 'text-gray-600 hover:text-gray-900';
-
   return (
-    <nav className="bg-white border-b border-gray-200 px-6 py-4 sticky top-0 z-20">
-      <div className="max-w-5xl mx-auto flex items-center justify-between">
-
-        {/* Logo */}
-        <Link href="/" className="text-xl font-bold text-blue-600">
-          VideoHub
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 h-14 flex items-center px-4 gap-4">
+      {/* Left — hamburger + logo */}
+      <div className="flex items-center gap-4 flex-shrink-0">
+        <button onClick={onMenuToggle} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Menu">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <Link href="/" className="flex items-center gap-1">
+          <span className="text-xl">🎬</span>
+          <span className="font-bold text-gray-900 text-lg hidden sm:block">VideoHub</span>
         </Link>
-
-        {/* Center nav links */}
-        <div className="hidden sm:flex items-center gap-6">
-          <Link href="/" className={`text-sm ${isActive('/')}`}>Home</Link>
-          {isLoggedIn && (
-            <Link href="/feed" className={`text-sm ${isActive('/feed')}`}>Feed</Link>
-          )}
-          <Link href="/search" className={`text-sm ${isActive('/search')}`}>Search</Link>
-        </div>
-
-        {/* Right side */}
-        <div className="flex items-center gap-3">
-          {isLoggedIn ? (
-            <>
-              {/* Notifications bell */}
-              <Link
-                href="/notifications"
-                className="relative p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors"
-                title="Notifications"
-              >
-                <span className="text-lg">🔔</span>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </Link>
-
-              {/* Upload */}
-              <Link
-                href="/upload"
-                className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Upload
-              </Link>
-
-              {/* Logout */}
-              <button
-                onClick={handleLogout}
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link href="/auth/login" className="text-sm text-gray-600 hover:text-gray-900">
-                Sign in
-              </Link>
-              <Link
-                href="/auth/register"
-                className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Get started
-              </Link>
-            </>
-          )}
-        </div>
-
       </div>
-    </nav>
+
+      {/* Center — search bar */}
+      <form onSubmit={handleSearch} className="flex-1 max-w-xl mx-auto flex">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Search"
+          className="flex-1 border border-gray-300 rounded-l-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+        />
+        <button type="submit"
+          className="px-5 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-full hover:bg-gray-200 transition-colors">
+          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+      </form>
+
+      {/* Right — actions */}
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {isLoggedIn ? (
+          <>
+            {/* Upload */}
+            <Link href="/upload" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-gray-100 text-sm font-medium transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="hidden sm:block">Upload</span>
+            </Link>
+
+            {/* Notifications */}
+            <Link href="/notifications" className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Avatar / logout */}
+            <button onClick={handleLogout}
+              className="w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center hover:bg-blue-700 transition-colors"
+              title="Logout">
+              V
+            </button>
+          </>
+        ) : (
+          <Link href="/auth/login"
+            className="flex items-center gap-1.5 px-4 py-1.5 border border-blue-600 text-blue-600 rounded-full text-sm font-medium hover:bg-blue-50 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            Sign in
+          </Link>
+        )}
+      </div>
+    </header>
   );
 }
