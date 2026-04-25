@@ -9,8 +9,11 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Security headers — protects against common web vulnerabilities
-  app.use(helmet());
+  // Security headers — relax CSP slightly to allow HLS media loading
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow HLS segments to be fetched
+    contentSecurityPolicy: false, // disable CSP — configure per-environment in production
+  }));
 
   // Enable CORS for Next.js frontend
   app.enableCors({

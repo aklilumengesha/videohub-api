@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ServeStaticModule } from '@nestjs/serve-static';
 import { APP_GUARD } from '@nestjs/core';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -18,6 +20,22 @@ import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
+    // Serve the uploads folder as static files
+    // HLS segments:   GET /uploads/hls/<videoId>/master.m3u8
+    // Thumbnails:     GET /uploads/thumbnails/<videoId>.jpg
+    // Raw uploads:    GET /uploads/<filename>
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'uploads'),
+      serveRoot: '/uploads',
+      serveStaticOptions: {
+        setHeaders: (res) => {
+          // Required for HLS — allows the browser to fetch segments cross-origin
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          // Cache segments for 1 hour, playlists for 5 seconds
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+        },
+      },
+    }),
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,
