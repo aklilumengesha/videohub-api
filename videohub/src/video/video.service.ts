@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import type { Queue } from 'bull';
+import Redis from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
 import { FfmpegService } from './ffmpeg.service';
 import { UploadVideoDto } from './dto/upload-video.dto';
@@ -9,12 +10,33 @@ import { UpdateVideoDto } from './dto/update-video.dto';
 import { VIDEO_PROCESSING_QUEUE } from './video.constants';
 
 @Injectable()
-export class VideoService {
+export class VideoService implements OnModuleInit {
+  private redis: Redis;
+
   constructor(
     private prisma: PrismaService,
     private ffmpeg: FfmpegService,
     @InjectQueue(VIDEO_PROCESSING_QUEUE) private videoQueue: Queue,
   ) {}
+
+  onModuleInit() {
+    // Create a dedicated Redis client for view count debouncing
+    this.redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+  }
+
+  // Increment view count at most once per IP per video per hour
+  private async incrementViewCount(videoId: string, ip: string): Promise<void> {
+    const key = `view:${videoId}:${ip}`;
+    const alreadyViewed = await this.redis.get(key);
+    if (alreadyViewed) return;
+
+    // Mark as viewed for 1 hour, then increment
+    await this.redis.setex(key, 3600, '1');
+    await this.prisma.video.update({
+      where: { id: videoId },
+      data: { viewCount: { increment: 1 } },
+    });
+  }
 
   async findAll() {
     return this.prisma.video.findMany({
@@ -37,7 +59,7 @@ export class VideoService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, ip?: string) {
     const video = await this.prisma.video.findUnique({
       where: { id },
       select: {
@@ -59,6 +81,12 @@ export class VideoService {
     });
 
     if (!video) throw new NotFoundException('Video not found');
+
+    // Increment view count in the background — don't await so response is fast
+    if (ip && video.status === 'READY') {
+      this.incrementViewCount(id, ip).catch(() => {});
+    }
+
     return video;
   }
 

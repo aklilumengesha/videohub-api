@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Put, Delete, Body, UseGuards, Request, Param,
+  Controller, Get, Post, Put, Delete, Body, UseGuards, Request, Param, Ip,
   UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -26,8 +26,8 @@ export class VideoController {
   @ApiResponse({ status: 200, description: 'Returns the video' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.videoService.findOne(id);
+  findOne(@Param('id') id: string, @Ip() ip: string) {
+    return this.videoService.findOne(id, ip);
   }
 
   @ApiOperation({ summary: 'Get video processing status' })
