@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { videosApi, likesApi, commentsApi, type Video, type Comment } from '@/lib/api';
+import HlsPlayer from '@/components/HlsPlayer';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -124,9 +125,16 @@ export default function VideoPage() {
                     <p className="text-sm">Video is processing...</p>
                   </div>
                 </div>
+              ) : video.hlsUrl ? (
+                <HlsPlayer
+                  hlsUrl={`${API_URL}/${video.hlsUrl}`}
+                  fallbackUrl={video.filePath ? `${API_URL}/${video.filePath}` : undefined}
+                  poster={video.thumbnailUrl ? `${API_URL}/${video.thumbnailUrl}` : undefined}
+                  className="rounded-xl aspect-video"
+                />
               ) : video.filePath ? (
                 <video
-                  src={videoSrc}
+                  src={`${API_URL}/${video.filePath}`}
                   controls
                   className="w-full h-full"
                   preload="metadata"

@@ -63,8 +63,12 @@ export interface Video {
   title: string;
   description?: string;
   filePath?: string;
+  hlsUrl?: string;
+  thumbnailUrl?: string;
   likeCount: number;
   commentCount: number;
+  viewCount: number;
+  duration?: number;
   status?: string;
   createdAt: string;
   user: { id: string; name: string };
