@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Put, Delete, Body, UseGuards, Request, Param, Ip,
+  Controller, Get, Post, Put, Delete, Body, UseGuards, Request, Param, Ip, Query,
   UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -15,11 +15,11 @@ import { multerStorage, videoFileFilter, MAX_FILE_SIZE } from './multer.config';
 export class VideoController {
   constructor(private readonly videoService: VideoService) {}
 
-  @ApiOperation({ summary: 'Get all videos' })
+  @ApiOperation({ summary: 'Get all videos, optionally filtered by category' })
   @ApiResponse({ status: 200, description: 'Returns list of all videos' })
   @Get()
-  findAll() {
-    return this.videoService.findAll();
+  findAll(@Query('category') category?: string) {
+    return this.videoService.findAll(category);
   }
 
   @ApiOperation({ summary: 'Get a single video by ID' })

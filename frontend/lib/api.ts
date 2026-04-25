@@ -148,7 +148,7 @@ export const usersApi = {
 // ── Videos API ────────────────────────────────────────────────────────────────
 
 export const videosApi = {
-  getAll: () => apiFetch('/videos'),
+  getAll: (category?: string) => apiFetch(`/videos${category ? `?category=${encodeURIComponent(category)}` : ''}`),
 
   getOne: (id: string) => apiFetch(`/videos/${id}`),
 

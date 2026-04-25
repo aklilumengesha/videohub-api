@@ -38,9 +38,12 @@ export class VideoService implements OnModuleInit {
     });
   }
 
-  async findAll() {
+  async findAll(category?: string) {
     return this.prisma.video.findMany({
-      where: { status: 'READY' },
+      where: {
+        status: 'READY',
+        ...(category ? { category } : {}),
+      },
       select: {
         id: true,
         title: true,
@@ -145,6 +148,7 @@ export class VideoService implements OnModuleInit {
         filePath: file?.path ?? null,
         userId,
         status: 'PROCESSING',
+        // category and tags will be enabled after npx prisma db push + prisma generate
       },
     });
 
