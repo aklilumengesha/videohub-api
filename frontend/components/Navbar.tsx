@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { notificationsApi } from '@/lib/api';
+import { notificationsApi, usersApi } from '@/lib/api';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 interface NavbarProps {
   onMenuToggle?: () => void;
@@ -15,16 +18,24 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
   const { isLoggedIn, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    if (!isLoggedIn) { setUnreadCount(0); return; }
-    const fetch = () => {
+    if (!isLoggedIn) { setUnreadCount(0); setAvatarUrl(null); setUserName(''); return; }
+    const fetchNotifs = () => {
       notificationsApi.getUnreadCount()
         .then(data => setUnreadCount(data.count ?? 0))
         .catch(() => {});
     };
-    fetch();
-    const interval = setInterval(fetch, 30000);
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 30000);
+
+    // Fetch user profile for avatar
+    usersApi.getMe()
+      .then(u => { setAvatarUrl(u.avatarUrl ?? null); setUserName(u.name); })
+      .catch(() => {});
+
     return () => clearInterval(interval);
   }, [isLoggedIn]);
 
@@ -38,6 +49,8 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
   const handleLogout = async () => {
     await logout();
     setUnreadCount(0);
+    setAvatarUrl(null);
+    setUserName('');
   };
 
   return (
@@ -98,9 +111,22 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
 
             {/* Avatar / logout */}
             <button onClick={handleLogout}
-              className="w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center hover:bg-blue-700 transition-colors"
+              className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors flex-shrink-0"
               title="Logout">
-              V
+              {avatarUrl ? (
+                <Image
+                  src={`${API_URL}/${avatarUrl}`}
+                  alt={userName}
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="w-full h-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">
+                  {userName ? userName.charAt(0).toUpperCase() : 'V'}
+                </div>
+              )}
             </button>
           </>
         ) : (

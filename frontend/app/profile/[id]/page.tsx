@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { usersApi, type User, type Video } from '@/lib/api';
 import VideoCard from '@/components/VideoCard';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -80,9 +83,22 @@ export default function ProfilePage() {
         {/* Profile card */}
         <div className="bg-white rounded-xl p-6 flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            {/* Avatar placeholder */}
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
-              {profile.name.charAt(0).toUpperCase()}
+            {/* Avatar */}
+            <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200">
+              {profile.avatarUrl ? (
+                <Image
+                  src={`${API_URL}/${profile.avatarUrl}`}
+                  alt={profile.name}
+                  width={64}
+                  height={64}
+                  className="w-full h-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
+                  {profile.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">{profile.name}</h1>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -14,6 +14,7 @@ interface Me {
   name: string;
   email: string;
   bio?: string;
+  avatarUrl?: string;
   createdAt: string;
 }
 
@@ -34,6 +35,10 @@ export default function ChannelPage() {
 
   // Delete confirmation
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Avatar upload
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!authLoading && !isLoggedIn) router.push('/auth/login');
@@ -73,6 +78,19 @@ export default function ChannelPage() {
     } catch { /* ignore */ }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const updated = await usersApi.uploadAvatar(file);
+      setMe(prev => prev ? { ...prev, avatarUrl: updated.avatarUrl } : prev);
+      setSaveMsg('Avatar updated!');
+      setTimeout(() => setSaveMsg(''), 3000);
+    } catch { /* ignore */ }
+    finally { setAvatarUploading(false); }
+  };
+
   if (authLoading || (!isLoggedIn && !authLoading)) return null;
 
   if (loading) return (
@@ -92,9 +110,40 @@ export default function ChannelPage() {
 
           <div className="px-6 pb-6">
             <div className="flex items-end justify-between -mt-10 mb-4">
-              {/* Avatar */}
-              <div className="w-20 h-20 rounded-full bg-white border-4 border-white shadow-md flex items-center justify-center text-3xl font-bold text-blue-600 bg-blue-100">
-                {me?.name.charAt(0).toUpperCase()}
+              {/* Avatar with upload button */}
+              <div className="relative group">
+                <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-md">
+                  {me?.avatarUrl ? (
+                    <Image
+                      src={`${API_URL}/${me.avatarUrl}`}
+                      alt={me.name}
+                      width={80}
+                      height={80}
+                      className="w-full h-full object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-blue-100 flex items-center justify-center text-3xl font-bold text-blue-600">
+                      {me?.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                {/* Upload overlay */}
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium"
+                  title="Change avatar"
+                >
+                  {avatarUploading ? '...' : '📷'}
+                </button>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
               </div>
 
               {/* Edit button */}

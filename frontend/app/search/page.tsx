@@ -168,8 +168,21 @@ export default function SearchPage() {
                           href={`/profile/${user.id}`}
                           className="flex items-center gap-4 bg-white rounded-xl p-4 hover:shadow-md transition-shadow border border-gray-100"
                         >
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                            {user.name.charAt(0).toUpperCase()}
+                          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border border-gray-200">
+                            {user.avatarUrl ? (
+                              <Image
+                                src={`${API_URL}/${user.avatarUrl}`}
+                                alt={user.name}
+                                width={48}
+                                height={48}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                                {user.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
                           </div>
                           <div>
                             <h3 className="font-semibold text-gray-900">{user.name}</h3>

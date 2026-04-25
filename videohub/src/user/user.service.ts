@@ -6,6 +6,14 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
+  async updateAvatar(userId: string, avatarPath: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: avatarPath },
+      select: { id: true, name: true, email: true, bio: true, avatarUrl: true, createdAt: true, updatedAt: true },
+    });
+  }
+
   async getMe(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -14,9 +22,9 @@ export class UserService {
         name: true,
         email: true,
         bio: true,
+        avatarUrl: true,
         createdAt: true,
         updatedAt: true,
-        // never return passwordHash or refreshToken
       },
     });
 
@@ -31,8 +39,8 @@ export class UserService {
         id: true,
         name: true,
         bio: true,
+        avatarUrl: true,
         createdAt: true,
-        // email, passwordHash, refreshToken are private
       },
     });
 

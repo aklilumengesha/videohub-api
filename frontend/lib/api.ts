@@ -55,6 +55,7 @@ export interface User {
   id: string;
   name: string;
   bio?: string;
+  avatarUrl?: string;
   createdAt: string;
 }
 
@@ -137,6 +138,12 @@ export const usersApi = {
 
   unfollow: (id: string) =>
     apiFetch(`/users/${id}/follow`, { method: 'DELETE' }),
+
+  uploadAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return apiFetch('/users/me/avatar', { method: 'POST', body: formData });
+  },
 
   getFollowers: (id: string, cursor?: string) =>
     apiFetch(`/users/${id}/followers${cursor ? `?cursor=${cursor}` : ''}`),
