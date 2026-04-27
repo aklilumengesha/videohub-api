@@ -23,129 +23,108 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [p, v] = await Promise.all([
-          usersApi.getProfile(id),
-          usersApi.getUserVideos(id),
-        ]);
-        setProfile(p);
-        setVideos(v);
-      } catch {
-        setError('User not found');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    Promise.all([
+      usersApi.getProfile(id),
+      usersApi.getUserVideos(id),
+    ]).then(([p, v]) => {
+      setProfile(p);
+      setVideos(v);
+    }).catch(() => setError('User not found'))
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleFollow = async () => {
     if (!isLoggedIn) { router.push('/auth/login'); return; }
     setFollowLoading(true);
     try {
-      if (following) {
-        await usersApi.unfollow(id);
-      } else {
-        await usersApi.follow(id);
-      }
+      if (following) { await usersApi.unfollow(id); }
+      else { await usersApi.follow(id); }
       setFollowing(f => !f);
-    } catch {
-      // already following/not following — ignore
-    } finally {
-      setFollowLoading(false);
-    }
+    } catch { /* ignore */ }
+    finally { setFollowLoading(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-400">Loading...</div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
-  if (error || !profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500 mb-4">{error || 'User not found'}</p>
-          <Link href="/" className="text-blue-600 hover:underline">← Back to home</Link>
-        </div>
+  if (error || !profile) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <p className="text-gray-500 mb-4">{error || 'User not found'}</p>
+        <Link href="/" className="text-blue-600 hover:underline">← Back to home</Link>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
+      {/* Channel banner */}
+      <div className="h-36 sm:h-48 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500" />
 
-        {/* Profile card */}
-        <div className="bg-white rounded-xl p-6 flex items-start justify-between gap-4">
-          <div className="flex items-center gap-4">
-            {/* Avatar */}
-            <div className="w-16 h-16 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-200">
-              {profile.avatarUrl ? (
-                <Image
-                  src={`${API_URL}/${profile.avatarUrl}`}
-                  alt={profile.name}
-                  width={64}
-                  height={64}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-                  {profile.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{profile.name}</h1>
-              {profile.bio && (
-                <p className="text-gray-500 text-sm mt-1 max-w-md">{profile.bio}</p>
-              )}
-              <p className="text-xs text-gray-400 mt-1">
-                Joined {new Date(profile.createdAt).toLocaleDateString()}
-              </p>
-            </div>
+      <div className="max-w-[1200px] mx-auto px-4">
+        {/* Channel header */}
+        <div className="flex items-end gap-5 -mt-10 mb-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+          {/* Avatar */}
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4 flex-shrink-0"
+            style={{ borderColor: 'var(--background)', background: 'var(--background)' }}>
+            {profile.avatarUrl ? (
+              <Image
+                src={`${API_URL}/${profile.avatarUrl}`}
+                alt={profile.name}
+                width={96}
+                height={96}
+                className="w-full h-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+                {profile.name.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
 
-          {/* Follow button */}
+          {/* Info + follow */}
+          <div className="flex-1 min-w-0 pb-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {videos.length} video{videos.length !== 1 ? 's' : ''} · Joined {new Date(profile.createdAt).toLocaleDateString()}
+            </p>
+            {profile.bio && (
+              <p className="text-sm text-gray-600 mt-1 line-clamp-2">{profile.bio}</p>
+            )}
+          </div>
+
           <button
             onClick={handleFollow}
             disabled={followLoading}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition-colors flex-shrink-0 disabled:opacity-50 ${
+            className={`flex-shrink-0 px-5 py-2 rounded-full text-sm font-semibold transition-colors disabled:opacity-50 ${
               following
                 ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-900 text-white hover:bg-gray-700'
             }`}
           >
-            {followLoading ? '...' : following ? 'Following' : 'Follow'}
+            {followLoading ? '...' : following ? 'Subscribed' : 'Subscribe'}
           </button>
         </div>
 
-        {/* Videos section */}
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Videos ({videos.length})
-          </h2>
-
-          {videos.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center text-gray-400">
-              <div className="text-4xl mb-2">🎬</div>
-              <p>No videos yet</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {videos.map(video => (
-                <VideoCard key={video.id} video={video} showChannel={false} />
-              ))}
-            </div>
-          )}
-        </div>
-
-      </main>
+        {/* Videos grid */}
+        {videos.length === 0 ? (
+          <div className="text-center py-20 text-gray-400">
+            <div className="text-5xl mb-3">🎬</div>
+            <p className="text-lg font-medium text-gray-600 mb-1">No videos yet</p>
+            <p className="text-sm">This channel hasn&apos;t uploaded any videos</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 pb-10">
+            {videos.map(video => (
+              <VideoCard key={video.id} video={video} showChannel={false} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
