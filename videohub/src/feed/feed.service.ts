@@ -6,8 +6,13 @@ const videoSelect = {
   title: true,
   description: true,
   filePath: true,
+  thumbnailUrl: true,
+  hlsUrl: true,
   likeCount: true,
   commentCount: true,
+  viewCount: true,
+  duration: true,
+  status: true,
   createdAt: true,
   user: { select: { id: true, name: true } },
 };
