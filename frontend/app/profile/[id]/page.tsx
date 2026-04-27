@@ -10,6 +10,12 @@ import VideoCard from '@/components/VideoCard';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+function formatSubscribers(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return `${n}`;
+}
+
 export default function ProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -90,7 +96,10 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0 pb-1">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {videos.length} video{videos.length !== 1 ? 's' : ''} · Joined {new Date(profile.createdAt).toLocaleDateString()}
+              {profile.subscriberCount !== undefined
+                ? `${formatSubscribers(profile.subscriberCount)} subscribers · `
+                : ''}
+              {videos.length} video{videos.length !== 1 ? 's' : ''}
             </p>
             {profile.bio && (
               <p className="text-sm text-gray-600 mt-1 line-clamp-2">{profile.bio}</p>

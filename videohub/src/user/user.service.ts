@@ -41,11 +41,20 @@ export class UserService {
         bio: true,
         avatarUrl: true,
         createdAt: true,
+        _count: { select: { followers: true } },
       },
     });
 
     if (!user) throw new NotFoundException('User not found');
-    return user;
+
+    return {
+      id: user.id,
+      name: user.name,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      createdAt: user.createdAt,
+      subscriberCount: user._count.followers,
+    };
   }
 
   async getUserVideos(userId: string) {
