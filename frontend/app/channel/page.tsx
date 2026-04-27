@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { usersApi, videosApi, type Video } from '@/lib/api';
+import { usersApi, videosApi, playlistsApi, type Video, type Playlist } from '@/lib/api';
 import VideoCard from '@/components/VideoCard';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -19,13 +19,17 @@ interface Me {
   createdAt: string;
 }
 
+type Tab = 'videos' | 'playlists' | 'about';
+
 export default function ChannelPage() {
   const router = useRouter();
   const { isLoggedIn, loading: authLoading } = useAuth();
 
   const [me, setMe] = useState<Me | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<Tab>('videos');
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -55,6 +59,15 @@ export default function ChannelPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [isLoggedIn]);
+
+  // Load playlists when tab is first opened
+  useEffect(() => {
+    if (activeTab === 'playlists' && playlists.length === 0 && isLoggedIn) {
+      playlistsApi.getMine()
+        .then((data: Playlist[]) => setPlaylists(data))
+        .catch(() => {});
+    }
+  }, [activeTab, playlists.length, isLoggedIn]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -97,6 +110,12 @@ export default function ChannelPage() {
     </div>
   );
 
+  const TABS: { id: Tab; label: string }[] = [
+    { id: 'videos', label: 'Videos' },
+    { id: 'playlists', label: 'Playlists' },
+    { id: 'about', label: 'About' },
+  ];
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
       {/* Banner */}
@@ -104,31 +123,22 @@ export default function ChannelPage() {
 
       <div className="max-w-[1200px] mx-auto px-4">
         {/* Channel header */}
-        <div className="flex items-end gap-5 -mt-10 mb-6 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
+        <div className="flex items-end gap-5 -mt-10 mb-0 pb-4">
           {/* Avatar with upload */}
           <div className="relative group flex-shrink-0">
             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden border-4"
               style={{ borderColor: 'var(--background)' }}>
               {me?.avatarUrl ? (
-                <Image
-                  src={`${API_URL}/${me.avatarUrl}`}
-                  alt={me.name}
-                  width={96}
-                  height={96}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
+                <Image src={`${API_URL}/${me.avatarUrl}`} alt={me.name}
+                  width={96} height={96} className="w-full h-full object-cover" unoptimized />
               ) : (
                 <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
                   {me?.name.charAt(0).toUpperCase()}
                 </div>
               )}
             </div>
-            <button
-              onClick={() => avatarInputRef.current?.click()}
-              disabled={avatarUploading}
-              className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium"
-            >
+            <button onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading}
+              className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium">
               {avatarUploading ? '...' : '📷'}
             </button>
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
@@ -156,7 +166,7 @@ export default function ChannelPage() {
             {saveMsg && <p className="text-xs text-green-600 mt-1">{saveMsg}</p>}
           </div>
 
-          {/* Edit / Save buttons */}
+          {/* Edit / Save */}
           <div className="flex gap-2 flex-shrink-0 pb-1">
             {editing ? (
               <>
@@ -178,39 +188,124 @@ export default function ChannelPage() {
           </div>
         </div>
 
-        {/* Videos section */}
-        <div className="pb-10">
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-base font-semibold text-gray-900">Your Videos ({videos.length})</h2>
-            <Link href="/upload"
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors">
-              + Upload
-            </Link>
-          </div>
-
-          {videos.length === 0 ? (
-            <div className="text-center py-20 text-gray-400">
-              <div className="text-5xl mb-3">🎬</div>
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No videos yet</h3>
-              <p className="text-gray-500 mb-4">Upload your first video to get started</p>
-              <Link href="/upload" className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition-colors">
-                Upload Video
+        {/* Tabs */}
+        <div className="flex border-b mt-2" style={{ borderColor: 'var(--border)' }}>
+          {TABS.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-gray-900 text-gray-900'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}>
+              {tab.label}
+            </button>
+          ))}
+          {/* Upload button in tab bar */}
+          {activeTab === 'videos' && (
+            <div className="ml-auto flex items-center pb-1">
+              <Link href="/upload"
+                className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors">
+                + Upload
               </Link>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
-              {videos.map(video => (
-                <div key={video.id} className="relative group/card">
-                  <VideoCard video={video} showChannel={false} />
-                  {/* Delete overlay on hover */}
-                  <button
-                    onClick={() => setDeletingId(video.id)}
-                    className="absolute top-2 right-2 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/card:opacity-100 transition-opacity hover:bg-red-600"
-                  >
-                    Delete
-                  </button>
+          )}
+        </div>
+
+        {/* Tab content */}
+        <div className="py-6 pb-10">
+          {/* Videos tab */}
+          {activeTab === 'videos' && (
+            videos.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">
+                <div className="text-5xl mb-3">🎬</div>
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">No videos yet</h3>
+                <p className="text-gray-500 mb-4">Upload your first video to get started</p>
+                <Link href="/upload" className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition-colors">
+                  Upload Video
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+                {videos.map(video => (
+                  <div key={video.id} className="relative group/card">
+                    <VideoCard video={video} showChannel={false} />
+                    <button onClick={() => setDeletingId(video.id)}
+                      className="absolute top-2 right-2 z-10 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover/card:opacity-100 transition-opacity hover:bg-red-600">
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+
+          {/* Playlists tab */}
+          {activeTab === 'playlists' && (
+            playlists.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">
+                <div className="text-5xl mb-3">📋</div>
+                <p className="text-lg font-medium text-gray-600 mb-1">No playlists yet</p>
+                <p className="text-sm mb-4">Create a playlist to organise your videos</p>
+                <Link href="/playlists" className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition-colors">
+                  Manage Playlists
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {playlists.map(pl => (
+                  <Link key={pl.id} href={`/playlists/${pl.id}`}
+                    className="flex items-center gap-4 rounded-xl px-4 py-3 hover:bg-gray-100 transition-colors"
+                    style={{ background: 'var(--background)' }}>
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl flex-shrink-0">
+                      📋
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 text-sm">{pl.title}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {pl._count?.videos ?? 0} videos · {pl.isPublic ? 'Public' : 'Private'}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
+          )}
+
+          {/* About tab */}
+          {activeTab === 'about' && (
+            <div className="max-w-xl space-y-4">
+              <div className="rounded-xl p-5" style={{ background: 'var(--background)' }}>
+                <h2 className="font-semibold text-gray-900 mb-3">Description</h2>
+                {me?.bio ? (
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{me.bio}</p>
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No description yet.{' '}
+                    <button onClick={() => { setEditing(true); setActiveTab('videos'); }}
+                      className="text-blue-600 hover:underline">Add one</button>
+                  </p>
+                )}
+              </div>
+              <div className="rounded-xl p-5" style={{ background: 'var(--background)' }}>
+                <h2 className="font-semibold text-gray-900 mb-3">Stats</h2>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <span>📅</span>
+                    <span>Joined {me ? new Date(me.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>👁</span>
+                    <span>{videos.reduce((s, v) => s + (v.viewCount ?? 0), 0).toLocaleString()} total views</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🎬</span>
+                    <span>{videos.length} video{videos.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>📧</span>
+                    <span>{me?.email}</span>
+                  </div>
                 </div>
-              ))}
+              </div>
             </div>
           )}
         </div>
@@ -224,13 +319,9 @@ export default function ChannelPage() {
             <p className="text-gray-500 text-sm mb-4">This action cannot be undone.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeletingId(null)}
-                className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">
-                Cancel
-              </button>
+                className="flex-1 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50">Cancel</button>
               <button onClick={() => handleDelete(deletingId)}
-                className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">
-                Delete
-              </button>
+                className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700">Delete</button>
             </div>
           </div>
         </div>
