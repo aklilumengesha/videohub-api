@@ -298,8 +298,13 @@ export const feedApi = {
 // ── Search API ────────────────────────────────────────────────────────────────
 
 export const searchApi = {
-  videos: (q: string, cursor?: string) =>
-    apiFetch(`/search/videos?q=${encodeURIComponent(q)}${cursor ? `&cursor=${cursor}` : ''}`),
+  videos: (q: string, cursor?: string, uploadDate?: string, sortBy?: string) => {
+    const params = new URLSearchParams({ q });
+    if (cursor) params.set('cursor', cursor);
+    if (uploadDate) params.set('uploadDate', uploadDate);
+    if (sortBy) params.set('sortBy', sortBy);
+    return apiFetch(`/search/videos?${params.toString()}`);
+  },
 
   users: (q: string, cursor?: string) =>
     apiFetch(`/search/users?q=${encodeURIComponent(q)}${cursor ? `&cursor=${cursor}` : ''}`),
