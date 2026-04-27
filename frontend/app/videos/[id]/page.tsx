@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { videosApi, likesApi, commentsApi, playlistsApi, adminApi, type Video, type Comment, type Playlist, type VideoChapter, type VideoSubtitle } from '@/lib/api';
 import HlsPlayer from '@/components/HlsPlayer';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -139,6 +140,36 @@ export default function VideoPage() {
     } catch { /* already reported or error — ignore */ }
     finally { setReporting(false); setShowReportMenu(false); }
   };
+
+  // Video keyboard shortcuts — only active on this page
+  useKeyboardShortcuts({
+    onPlayPause: () => {
+      const v = document.querySelector('video') as HTMLVideoElement | null;
+      if (!v) return;
+      v.paused ? v.play().catch(() => {}) : v.pause();
+    },
+    onSeekBack: () => {
+      const v = document.querySelector('video') as HTMLVideoElement | null;
+      if (v) v.currentTime = Math.max(0, v.currentTime - 10);
+    },
+    onSeekForward: () => {
+      const v = document.querySelector('video') as HTMLVideoElement | null;
+      if (v) v.currentTime = Math.min(v.duration || Infinity, v.currentTime + 10);
+    },
+    onMute: () => {
+      const v = document.querySelector('video') as HTMLVideoElement | null;
+      if (v) v.muted = !v.muted;
+    },
+    onFullscreen: () => {
+      const v = document.querySelector('video') as HTMLVideoElement | null;
+      if (!v) return;
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else {
+        v.requestFullscreen().catch(() => {});
+      }
+    },
+  });
 
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>;
 

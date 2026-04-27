@@ -154,7 +154,7 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
             {/* Avatar / logout */}
             <button onClick={handleLogout}
               className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors flex-shrink-0"
-              title="Logout">
+              title="Logout (press ? for shortcuts)">
               {avatarUrl ? (
                 <Image
                   src={`${API_URL}/${avatarUrl}`}
