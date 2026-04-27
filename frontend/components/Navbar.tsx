@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -22,19 +22,29 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userId, setUserId] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isLoggedIn) { setUnreadCount(0); setAvatarUrl(null); setUserName(''); return; }
+    if (!isLoggedIn) {
+      setUnreadCount(0); setAvatarUrl(null); setUserName(''); setUserEmail(''); setUserId('');
+      return;
+    }
 
-    // Fetch initial unread count + user profile
     notificationsApi.getUnreadCount()
       .then(data => setUnreadCount(data.count ?? 0))
       .catch(() => {});
     usersApi.getMe()
-      .then(u => { setAvatarUrl(u.avatarUrl ?? null); setUserName(u.name); })
+      .then(u => {
+        setAvatarUrl(u.avatarUrl ?? null);
+        setUserName(u.name);
+        setUserEmail(u.email ?? '');
+        setUserId(u.id ?? '');
+      })
       .catch(() => {});
 
-    // Open SSE stream for real-time notifications
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (!token) return;
 
@@ -42,12 +52,10 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
     const es = new EventSource(`${API_BASE}/sse/events?token=${encodeURIComponent(token)}`);
 
     es.addEventListener('notification', () => {
-      // Any new notification — increment badge
       setUnreadCount(c => c + 1);
     });
 
     es.onerror = () => {
-      // SSE disconnected — fall back to polling
       es.close();
       const interval = setInterval(() => {
         notificationsApi.getUnreadCount()
@@ -60,6 +68,17 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
     return () => { es.close(); };
   }, [isLoggedIn]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -68,15 +87,58 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
   };
 
   const handleLogout = async () => {
+    setMenuOpen(false);
     await logout();
     setUnreadCount(0);
     setAvatarUrl(null);
     setUserName('');
+    setUserEmail('');
+    setUserId('');
   };
+
+  const Avatar = () => (
+    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors flex-shrink-0">
+      {avatarUrl ? (
+        <Image
+          src={`${API_URL}/${avatarUrl}`}
+          alt={userName}
+          width={32}
+          height={32}
+          className="w-full h-full object-cover"
+          unoptimized
+        />
+      ) : (
+        <div className="w-full h-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">
+          {userName ? userName.charAt(0).toUpperCase() : 'V'}
+        </div>
+      )}
+    </div>
+  );
+
+  const ThemeToggle = () => (
+    <button
+      onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+      className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+      aria-label="Toggle theme"
+    >
+      {resolvedTheme === 'dark' ? (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      )}
+    </button>
+  );
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-4 gap-4 border-b transition-colors"
       style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+
       {/* Left — hamburger + logo */}
       <div className="flex items-center gap-4 flex-shrink-0">
         <button onClick={onMenuToggle} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Menu">
@@ -111,25 +173,7 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
       <div className="flex items-center gap-2 flex-shrink-0">
         {isLoggedIn ? (
           <>
-            {/* Theme toggle */}
-            <button
-              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              title={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-              aria-label="Toggle theme"
-            >
-              {resolvedTheme === 'dark' ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
+            <ThemeToggle />
 
             {/* Upload */}
             <Link href="/upload" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-gray-100 text-sm font-medium transition-colors">
@@ -151,45 +195,77 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
               )}
             </Link>
 
-            {/* Avatar / logout */}
-            <button onClick={handleLogout}
-              className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200 hover:border-blue-500 transition-colors flex-shrink-0"
-              title="Logout (press ? for shortcuts)">
-              {avatarUrl ? (
-                <Image
-                  src={`${API_URL}/${avatarUrl}`}
-                  alt={userName}
-                  width={32}
-                  height={32}
-                  className="w-full h-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                <div className="w-full h-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">
-                  {userName ? userName.charAt(0).toUpperCase() : 'V'}
+            {/* Account menu */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen(v => !v)}
+                className="focus:outline-none"
+                aria-label="Account menu"
+              >
+                <Avatar />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-11 w-64 rounded-xl shadow-xl border z-50 overflow-hidden"
+                  style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+
+                  {/* User info header */}
+                  <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                    <Avatar />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{userName}</p>
+                      <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+                    </div>
+                  </div>
+
+                  {/* Menu items */}
+                  <div className="py-1">
+                    <Link href={`/profile/${userId}`} onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      <span className="text-base">👤</span> Your profile
+                    </Link>
+                    <Link href="/channel" onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      <span className="text-base">📺</span> My Channel
+                    </Link>
+                    <Link href="/analytics" onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      <span className="text-base">📊</span> Analytics
+                    </Link>
+                    <Link href="/playlists" onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      <span className="text-base">📋</span> Playlists
+                    </Link>
+                  </div>
+
+                  <div className="border-t py-1" style={{ borderColor: 'var(--border)' }}>
+                    {/* Theme toggle in menu */}
+                    <button
+                      onClick={() => { setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'); setMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors text-left"
+                    >
+                      <span className="text-base">{resolvedTheme === 'dark' ? '☀️' : '🌙'}</span>
+                      {resolvedTheme === 'dark' ? 'Light mode' : 'Dark mode'}
+                    </button>
+                    <Link href="/admin" onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      <span className="text-base">🛡️</span> Admin panel
+                    </Link>
+                  </div>
+
+                  <div className="border-t py-1" style={{ borderColor: 'var(--border)' }}>
+                    <button onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left">
+                      <span className="text-base">🚪</span> Sign out
+                    </button>
+                  </div>
                 </div>
               )}
-            </button>
+            </div>
           </>
         ) : (
           <>
-            <button
-              onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Toggle theme"
-            >
-              {resolvedTheme === 'dark' ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M17.657 17.657l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              )}
-            </button>
+            <ThemeToggle />
             <Link href="/auth/login"
               className="flex items-center gap-1.5 px-4 py-1.5 border border-blue-600 text-blue-600 rounded-full text-sm font-medium hover:bg-blue-50 transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
