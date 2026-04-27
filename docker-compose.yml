@@ -34,28 +34,31 @@ services:
       retries: 5
 
   # ── NestJS API ───────────────────────────────────────────────────────────────
-  api:
-    build:
-      context: ./videohub
-      dockerfile: Dockerfile
-    container_name: videohub_api
-    restart: unless-stopped
-    ports:
-      - '3000:3000'
-    env_file:
-      - ./videohub/.env          # reads DATABASE_URL, JWT secrets, etc. from .env
-    environment:
-      # Override DB and Redis to point at Docker service names, not localhost
-      DATABASE_URL: postgresql://videohub:videohub_password@postgres:5432/videohub
-      REDIS_URL: redis://redis:6379
-      PORT: 3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - uploads_data:/app/uploads
+  # DISABLED: Run the API on the host with `npm run start:dev` instead.
+  # Both port 3000 (API) and 3001 (Next.js) are already in use on the host.
+  # Docker is only needed here for postgres + redis.
+  #
+  # api:
+  #   build:
+  #     context: ./videohub
+  #     dockerfile: Dockerfile
+  #   container_name: videohub_api
+  #   restart: unless-stopped
+  #   ports:
+  #     - '3002:3000'
+  #   env_file:
+  #     - ./videohub/.env
+  #   environment:
+  #     DATABASE_URL: postgresql://videohub:videohub_password@postgres:5432/videohub
+  #     REDIS_URL: redis://redis:6379
+  #     PORT: 3000
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   volumes:
+  #     - uploads_data:/app/uploads
 
 volumes:
   postgres_data:
