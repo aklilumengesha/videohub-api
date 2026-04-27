@@ -5,7 +5,7 @@ export class CreatePlaylistDto {
   @ApiProperty({ example: 'My Favourites' })
   @IsString()
   @MaxLength(100)
-  title: string;
+  title!: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

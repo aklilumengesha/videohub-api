@@ -6,12 +6,12 @@ export class ChapterItemDto {
   @ApiProperty({ example: 'Introduction' })
   @IsString()
   @MaxLength(100)
-  title: string;
+  title!: string;
 
   @ApiProperty({ example: 0, description: 'Start time in seconds' })
   @IsInt()
   @Min(0)
-  startTime: number;
+  startTime!: number;
 }
 
 export class SetChaptersDto {
@@ -19,5 +19,5 @@ export class SetChaptersDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ChapterItemDto)
-  chapters: ChapterItemDto[];
+  chapters!: ChapterItemDto[];
 }

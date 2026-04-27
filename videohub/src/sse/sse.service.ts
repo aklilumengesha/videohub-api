@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 
 export interface SseEvent {
   type: string;

@@ -1,6 +1,6 @@
 import { Controller, Get, Res, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { Response } from 'express';
+import type { Response } from 'express';
 import { SseService } from './sse.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 

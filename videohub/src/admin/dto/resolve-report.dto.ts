@@ -9,5 +9,5 @@ export enum ReportStatus {
 export class ResolveReportDto {
   @ApiProperty({ enum: ReportStatus })
   @IsEnum(ReportStatus)
-  status: ReportStatus;
+  status!: ReportStatus;
 }

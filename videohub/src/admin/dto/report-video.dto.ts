@@ -13,7 +13,7 @@ export enum ReportReason {
 export class ReportVideoDto {
   @ApiProperty({ enum: ReportReason })
   @IsEnum(ReportReason)
-  reason: ReportReason;
+  reason!: ReportReason;
 
   @ApiProperty({ required: false })
   @IsOptional()
