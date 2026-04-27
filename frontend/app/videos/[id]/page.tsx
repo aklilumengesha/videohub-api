@@ -103,12 +103,16 @@ export default function VideoPage() {
       setLikeCount(v.likeCount);
       setComments(c);
       setRelated(r);
+      // Load like state for logged-in users (non-blocking)
+      if (isLoggedIn) {
+        likesApi.isLiked(id).then((res: { liked: boolean }) => setLiked(res.liked)).catch(() => {});
+      }
       videosApi.getChapters(id).then((ch: VideoChapter[]) => setChapters(ch)).catch(() => {});
       videosApi.getSubtitles(id).then((s: VideoSubtitle[]) => setSubtitles(s)).catch(() => {});
       videosApi.recordWatch(id).catch(() => {});
     }).catch(() => setError('Video not found'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, isLoggedIn]);
 
   const handleLike = async () => {
     if (!isLoggedIn) { router.push('/auth/login'); return; }

@@ -51,4 +51,11 @@ export class LikeService {
 
     return { message: 'Video unliked', videoId };
   }
+
+  async isLiked(videoId: string, userId: string): Promise<{ liked: boolean }> {
+    const record = await this.prisma.like.findUnique({
+      where: { userId_videoId: { userId, videoId } },
+    });
+    return { liked: !!record };
+  }
 }

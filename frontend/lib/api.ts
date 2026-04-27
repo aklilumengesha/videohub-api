@@ -251,6 +251,8 @@ export const videosApi = {
 // ── Likes API ─────────────────────────────────────────────────────────────────
 
 export const likesApi = {
+  isLiked: (videoId: string) => apiFetch(`/videos/${videoId}/like`),
+
   like: (videoId: string) =>
     apiFetch(`/videos/${videoId}/like`, { method: 'POST' }),
 
