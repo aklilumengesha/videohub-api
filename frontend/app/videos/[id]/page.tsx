@@ -71,6 +71,10 @@ export default function VideoPage() {
   const [autoplayCountdown, setAutoplayCountdown] = useState<number | null>(null);
   const autoplayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Miniplayer — shown when main player scrolls out of view
+  const [showMiniplayer, setShowMiniplayer] = useState(false);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+
   const handleShare = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url).then(() => {
@@ -214,6 +218,18 @@ export default function VideoPage() {
     return () => { if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current); };
   }, [id]);
 
+  // Miniplayer: show when player scrolls out of view
+  useEffect(() => {
+    const container = playerContainerRef.current;
+    if (!container) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowMiniplayer(!entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [video]); // re-attach after video loads
+
   useKeyboardShortcuts({
     onPlayPause: () => {
       const v = document.querySelector('video') as HTMLVideoElement | null;
@@ -264,7 +280,7 @@ export default function VideoPage() {
         <div className="flex-1 min-w-0 space-y-4">
 
           {/* Player */}
-          <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+          <div ref={playerContainerRef} className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
             {video.status === 'PROCESSING' ? (
               <div className="w-full h-full flex items-center justify-center text-white">
                 <div className="text-center"><div className="text-3xl mb-2">⏳</div><p className="text-sm">Processing...</p></div>
@@ -574,6 +590,48 @@ export default function VideoPage() {
         </div>
 
       </div>
+
+      {/* ── Miniplayer — fixed bottom-right when main player is out of view ── */}
+      {showMiniplayer && video && (video.hlsUrl || video.filePath) && (
+        <div className="fixed bottom-4 right-4 z-50 w-72 rounded-xl overflow-hidden shadow-2xl border"
+          style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+          {/* Mini video */}
+          <div className="relative aspect-video bg-black">
+            {video.hlsUrl ? (
+              <HlsPlayer
+                hlsUrl={`${API_URL}/${video.hlsUrl}`}
+                fallbackUrl={video.filePath ? `${API_URL}/${video.filePath}` : undefined}
+                poster={video.thumbnailUrl ? `${API_URL}/${video.thumbnailUrl}` : undefined}
+                className="w-full h-full"
+                autoPlay
+              />
+            ) : video.filePath ? (
+              <video src={`${API_URL}/${video.filePath}`} controls autoPlay
+                className="w-full h-full" />
+            ) : null}
+
+            {/* Close button */}
+            <button
+              onClick={() => setShowMiniplayer(false)}
+              className="absolute top-1 right-1 w-6 h-6 bg-black/70 text-white rounded-full flex items-center justify-center text-xs hover:bg-black transition-colors z-10"
+              title="Close miniplayer"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Mini info — click to scroll back to main player */}
+          <button
+            onClick={() => {
+              setShowMiniplayer(false);
+              playerContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+            className="w-full px-3 py-2 text-left hover:bg-gray-100 transition-colors">
+            <p className="text-xs font-semibold text-gray-900 line-clamp-1">{video.title}</p>
+            <p className="text-xs text-gray-500">{video.user.name}</p>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
