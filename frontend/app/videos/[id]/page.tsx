@@ -3,9 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { videosApi, likesApi, commentsApi, playlistsApi, adminApi, type Video, type Comment, type Playlist, type VideoChapter, type VideoSubtitle } from '@/lib/api';
+import {
+  videosApi, likesApi, commentsApi, playlistsApi, adminApi,
+  type Video, type Comment, type Playlist, type VideoChapter, type VideoSubtitle,
+} from '@/lib/api';
 import HlsPlayer from '@/components/HlsPlayer';
 import VideoThumbnail from '@/components/VideoThumbnail';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
@@ -16,6 +18,22 @@ function formatDuration(s?: number) {
   if (!s) return '';
   const m = Math.floor(s / 60), sec = s % 60;
   return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function formatViews(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+  return `${n}`;
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days < 1) return 'today';
+  if (days < 30) return `${days} day${days !== 1 ? 's' : ''} ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months} month${months !== 1 ? 's' : ''} ago`;
+  return `${Math.floor(months / 12)} year${Math.floor(months / 12) !== 1 ? 's' : ''} ago`;
 }
 
 export default function VideoPage() {
@@ -32,51 +50,45 @@ export default function VideoPage() {
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showDesc, setShowDesc] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
-  // Save to playlist
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [playlistsLoaded, setPlaylistsLoaded] = useState(false);
   const [savingTo, setSavingTo] = useState<string | null>(null);
 
-  // Chapters
   const [chapters, setChapters] = useState<VideoChapter[]>([]);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Subtitles
   const [subtitles, setSubtitles] = useState<VideoSubtitle[]>([]);
 
-  // Report
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reportDone, setReportDone] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [v, c, r] = await Promise.all([
-          videosApi.getOne(id),
-          commentsApi.getAll(id),
-          videosApi.getRelated(id),
-        ]);
-        setVideo(v);
-        setLikeCount(v.likeCount);
-        setComments(c);
-        setRelated(r);
-        // Load chapters (non-blocking)
-        videosApi.getChapters(id).then((ch: VideoChapter[]) => setChapters(ch)).catch(() => {});
-        // Load subtitles (non-blocking)
-        videosApi.getSubtitles(id).then((s: VideoSubtitle[]) => setSubtitles(s)).catch(() => {});
-        // Record watch in history (fire-and-forget — only works if logged in)
-        videosApi.recordWatch(id).catch(() => {});
-      } catch {
-        setError('Video not found');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    setLoading(true);
+    setVideo(null);
+    setComments([]);
+    setRelated([]);
+    setChapters([]);
+    setSubtitles([]);
+    setLiked(false);
+    setShowDesc(false);
+
+    Promise.all([
+      videosApi.getOne(id),
+      commentsApi.getAll(id),
+      videosApi.getRelated(id),
+    ]).then(([v, c, r]) => {
+      setVideo(v);
+      setLikeCount(v.likeCount);
+      setComments(c);
+      setRelated(r);
+      videosApi.getChapters(id).then((ch: VideoChapter[]) => setChapters(ch)).catch(() => {});
+      videosApi.getSubtitles(id).then((s: VideoSubtitle[]) => setSubtitles(s)).catch(() => {});
+      videosApi.recordWatch(id).catch(() => {});
+    }).catch(() => setError('Video not found'))
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleLike = async () => {
@@ -97,7 +109,7 @@ export default function VideoPage() {
       const newComment = await commentsApi.create(id, commentText.trim());
       setComments(prev => [newComment, ...prev]);
       setCommentText('');
-    } catch { setError('Failed to post comment'); }
+    } catch { /* ignore */ }
     finally { setCommentLoading(false); }
   };
 
@@ -120,14 +132,12 @@ export default function VideoPage() {
 
   const handleSaveToPlaylist = async (playlistId: string) => {
     setSavingTo(playlistId);
-    try {
-      await playlistsApi.addVideo(playlistId, id);
-    } catch { /* already in playlist — ignore */ }
+    try { await playlistsApi.addVideo(playlistId, id); }
+    catch { /* ignore */ }
     finally { setSavingTo(null); setShowPlaylistMenu(false); }
   };
 
   const seekTo = (seconds: number) => {
-    // Works for plain <video> elements; HlsPlayer exposes its own video element
     const el = document.querySelector('video') as HTMLVideoElement | null;
     if (el) { el.currentTime = seconds; el.play().catch(() => {}); }
   };
@@ -135,14 +145,11 @@ export default function VideoPage() {
   const handleReport = async (reason: string) => {
     if (!isLoggedIn) { router.push('/auth/login'); return; }
     setReporting(true);
-    try {
-      await adminApi.reportVideo(id, reason);
-      setReportDone(true);
-    } catch { /* already reported or error — ignore */ }
+    try { await adminApi.reportVideo(id, reason); setReportDone(true); }
+    catch { /* ignore */ }
     finally { setReporting(false); setShowReportMenu(false); }
   };
 
-  // Video keyboard shortcuts — only active on this page
   useKeyboardShortcuts({
     onPlayPause: () => {
       const v = document.querySelector('video') as HTMLVideoElement | null;
@@ -164,15 +171,17 @@ export default function VideoPage() {
     onFullscreen: () => {
       const v = document.querySelector('video') as HTMLVideoElement | null;
       if (!v) return;
-      if (document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      } else {
-        v.requestFullscreen().catch(() => {});
-      }
+      document.fullscreenElement
+        ? document.exitFullscreen().catch(() => {})
+        : v.requestFullscreen().catch(() => {});
     },
   });
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   if (error || !video) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -184,197 +193,264 @@ export default function VideoPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+    <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
+      <div className="max-w-[1800px] mx-auto px-4 py-4 flex gap-6">
 
-          {/* ── Video + info (2 cols) ── */}
-          <div className="xl:col-span-2 space-y-4">
-            <div className="bg-black rounded-xl overflow-hidden aspect-video">
-              {video.status === 'PROCESSING' ? (
-                <div className="w-full h-full flex items-center justify-center text-white">
-                  <div className="text-center"><div className="text-3xl mb-2">⏳</div><p className="text-sm">Processing...</p></div>
-                </div>
-              ) : video.hlsUrl ? (
-                <HlsPlayer
-                  hlsUrl={`${API_URL}/${video.hlsUrl}`}
-                  fallbackUrl={video.filePath ? `${API_URL}/${video.filePath}` : undefined}
-                  poster={video.thumbnailUrl ? `${API_URL}/${video.thumbnailUrl}` : undefined}
-                  subtitles={subtitles}
-                  className="rounded-xl aspect-video"
-                />
-              ) : video.filePath ? (
-                <video src={`${API_URL}/${video.filePath}`} controls className="w-full h-full" preload="metadata">
-                  {subtitles.map((sub, i) => (
-                    <track key={sub.id} kind="subtitles" src={`${API_URL}/${sub.filePath}`}
-                      srcLang={sub.language} label={sub.label} default={i === 0} />
-                  ))}
-                </video>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400"><span className="text-4xl">🎬</span></div>
-              )}
-            </div>
+        {/* ── LEFT: video + info + comments ── */}
+        <div className="flex-1 min-w-0 space-y-4">
 
-            <div className="bg-white rounded-xl p-4">
-              <h1 className="text-xl font-bold text-gray-900 mb-1">{video.title}</h1>
-              {video.description && <p className="text-gray-600 text-sm mb-3">{video.description}</p>}
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-3">
-                  <Link href={`/profile/${video.user.id}`} className="text-sm text-blue-600 hover:underline font-medium">{video.user.name}</Link>
-                  <span className="text-xs text-gray-400">{video.viewCount.toLocaleString()} views</span>
-                  <span className="text-xs text-gray-400">{new Date(video.createdAt).toLocaleDateString()}</span>
-                </div>
-                <button onClick={handleLike} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${liked ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600 hover:bg-red-50 hover:text-red-500'}`}>
-                  {liked ? '❤️' : '🤍'} {likeCount}
-                </button>                {/* Save to playlist */}
-                <div className="relative">
-                  <button onClick={openPlaylistMenu}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
-                    📋 Save
-                  </button>                  {showPlaylistMenu && (
-                    <div className="absolute right-0 top-10 z-20 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[200px] py-2">
-                      {playlists.length === 0 ? (
-                        <div className="px-4 py-3 text-sm text-gray-400 text-center">
-                          No playlists yet.{' '}
-                          <Link href="/playlists" className="text-blue-600 hover:underline">Create one</Link>
-                        </div>
-                      ) : (
-                        playlists.map(pl => (
-                          <button key={pl.id} onClick={() => handleSaveToPlaylist(pl.id)}
-                            disabled={savingTo === pl.id}
-                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-                            {savingTo === pl.id ? 'Saving...' : pl.title}
-                          </button>
-                        ))
-                      )}
-                      <div className="border-t border-gray-100 mt-1 pt-1">
-                        <Link href="/playlists" className="block px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 transition-colors">
-                          + New playlist
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Report button */}
-                <div className="relative ml-auto">
-                  {reportDone ? (
-                    <span className="text-xs text-green-600 font-medium">✓ Reported</span>
-                  ) : (
-                    <button onClick={() => setShowReportMenu(v => !v)}
-                      className="text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50">
-                      ⚑ Report
-                    </button>
-                  )}
-                  {showReportMenu && (
-                    <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-xl shadow-lg min-w-[180px] py-2">
-                      <p className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">Report reason</p>
-                      {['SPAM', 'HARASSMENT', 'MISINFORMATION', 'INAPPROPRIATE_CONTENT', 'COPYRIGHT', 'OTHER'].map(r => (
-                        <button key={r} onClick={() => handleReport(r)} disabled={reporting}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors capitalize">
-                          {r.replace(/_/g, ' ').toLowerCase()}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+          {/* Player */}
+          <div className="w-full aspect-video bg-black rounded-xl overflow-hidden">
+            {video.status === 'PROCESSING' ? (
+              <div className="w-full h-full flex items-center justify-center text-white">
+                <div className="text-center"><div className="text-3xl mb-2">⏳</div><p className="text-sm">Processing...</p></div>
               </div>
-            </div>
-
-            {/* Chapters panel */}
-            {chapters.length > 0 && (
-              <div className="bg-white rounded-xl p-4">
-                <h2 className="font-semibold text-gray-900 mb-3">Chapters</h2>
-                <div className="space-y-1">
-                  {chapters.map(ch => (
-                    <button
-                      key={ch.id}
-                      onClick={() => seekTo(ch.startTime)}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 text-left transition-colors group"
-                    >
-                      <span className="text-xs font-mono text-blue-600 w-10 flex-shrink-0">
-                        {formatDuration(ch.startTime)}
-                      </span>
-                      <span className="text-sm text-gray-700 group-hover:text-gray-900">{ch.title}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Subtitles panel */}
-            {subtitles.length > 0 && (
-              <div className="bg-white rounded-xl p-4">
-                <h2 className="font-semibold text-gray-900 mb-3">Subtitles / CC</h2>
-                <div className="flex flex-wrap gap-2">
-                  {subtitles.map(sub => (
-                    <span key={sub.id}
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
-                      🗣 {sub.label}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-400 mt-2">Enable captions in the video player controls (CC button)</p>
+            ) : video.hlsUrl ? (
+              <HlsPlayer
+                hlsUrl={`${API_URL}/${video.hlsUrl}`}
+                fallbackUrl={video.filePath ? `${API_URL}/${video.filePath}` : undefined}
+                poster={video.thumbnailUrl ? `${API_URL}/${video.thumbnailUrl}` : undefined}
+                subtitles={subtitles}
+                className="w-full h-full"
+              />
+            ) : video.filePath ? (
+              <video src={`${API_URL}/${video.filePath}`} controls className="w-full h-full" preload="metadata">
+                {subtitles.map((sub, i) => (
+                  <track key={sub.id} kind="subtitles" src={`${API_URL}/${sub.filePath}`}
+                    srcLang={sub.language} label={sub.label} default={i === 0} />
+                ))}
+              </video>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                <span className="text-4xl">🎬</span>
               </div>
             )}
           </div>
 
-          {/* ── Comments (1 col) ── */}
-          <div className="bg-white rounded-xl p-4 flex flex-col h-fit max-h-[600px]">
-            <h2 className="font-semibold text-gray-900 mb-3">Comments ({video.commentCount})</h2>
-            <form onSubmit={handleComment} className="mb-4">
-              <div className="flex gap-2">
-                <input ref={commentInputRef} type="text" value={commentText} onChange={e => setCommentText(e.target.value)}
-                  placeholder={isLoggedIn ? 'Add a comment...' : 'Login to comment'}
+          {/* Title */}
+          <h1 className="text-lg font-bold text-gray-900 leading-snug">{video.title}</h1>
+
+          {/* Channel row + action buttons */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            {/* Channel info */}
+            <div className="flex items-center gap-3">
+              <Link href={`/profile/${video.user.id}`}
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                {video.user.name.charAt(0).toUpperCase()}
+              </Link>
+              <div>
+                <Link href={`/profile/${video.user.id}`}
+                  className="text-sm font-semibold text-gray-900 hover:text-blue-600 block">
+                  {video.user.name}
+                </Link>
+                <p className="text-xs text-gray-500">
+                  {formatViews(video.viewCount)} views · {timeAgo(video.createdAt)}
+                </p>
+              </div>
+            </div>
+
+            {/* Action buttons — YouTube pill style */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Like */}
+              <button onClick={handleLike}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  liked ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}>
+                <svg className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                </svg>
+                {likeCount > 0 ? likeCount.toLocaleString() : 'Like'}
+              </button>
+
+              {/* Save to playlist */}
+              <div className="relative">
+                <button onClick={openPlaylistMenu}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  Save
+                </button>
+                {showPlaylistMenu && (
+                  <div className="absolute right-0 top-11 z-20 rounded-xl shadow-xl border min-w-[200px] py-2"
+                    style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+                    {playlists.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-gray-400 text-center">
+                        No playlists.{' '}
+                        <Link href="/playlists" className="text-blue-600 hover:underline">Create one</Link>
+                      </div>
+                    ) : playlists.map(pl => (
+                      <button key={pl.id} onClick={() => handleSaveToPlaylist(pl.id)}
+                        disabled={savingTo === pl.id}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition-colors">
+                        {savingTo === pl.id ? 'Saving...' : pl.title}
+                      </button>
+                    ))}
+                    <div className="border-t mt-1 pt-1" style={{ borderColor: 'var(--border)' }}>
+                      <Link href="/playlists" className="block px-4 py-2 text-sm text-blue-600 hover:bg-gray-100 transition-colors">
+                        + New playlist
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Share / Report */}
+              <div className="relative">
+                {reportDone ? (
+                  <span className="text-xs text-green-600 font-medium px-3 py-2">✓ Reported</span>
+                ) : (
+                  <button onClick={() => setShowReportMenu(v => !v)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+                    </svg>
+                  </button>
+                )}
+                {showReportMenu && (
+                  <div className="absolute right-0 top-11 z-20 rounded-xl shadow-xl border min-w-[180px] py-2"
+                    style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+                    <p className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wide">Report</p>
+                    {['SPAM', 'HARASSMENT', 'MISINFORMATION', 'INAPPROPRIATE_CONTENT', 'COPYRIGHT', 'OTHER'].map(r => (
+                      <button key={r} onClick={() => handleReport(r)} disabled={reporting}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition-colors capitalize">
+                        {r.replace(/_/g, ' ').toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Description box — collapsible like YouTube */}
+          <div className="rounded-xl p-4 cursor-pointer" style={{ background: 'var(--background)' }}
+            onClick={() => setShowDesc(v => !v)}>
+            <div className={`text-sm text-gray-700 ${showDesc ? '' : 'line-clamp-2'}`}>
+              {video.description || <span className="text-gray-400 italic">No description</span>}
+            </div>
+            {(video.description?.length ?? 0) > 100 && (
+              <button className="text-xs font-semibold text-gray-900 mt-1 hover:underline">
+                {showDesc ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+
+          {/* Chapters */}
+          {chapters.length > 0 && (
+            <div className="rounded-xl p-4" style={{ background: 'var(--background)' }}>
+              <h2 className="font-semibold text-gray-900 mb-3 text-sm">Chapters</h2>
+              <div className="space-y-0.5">
+                {chapters.map(ch => (
+                  <button key={ch.id} onClick={() => seekTo(ch.startTime)}
+                    className="w-full flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-gray-100 text-left transition-colors group">
+                    <span className="text-xs font-mono text-blue-600 w-10 flex-shrink-0">{formatDuration(ch.startTime)}</span>
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">{ch.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Comments */}
+          <div className="rounded-xl p-4 space-y-4" style={{ background: 'var(--background)' }}>
+            <h2 className="font-semibold text-gray-900">{video.commentCount} Comments</h2>
+
+            {/* Comment input */}
+            <form onSubmit={handleComment} className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                {isLoggedIn ? '👤' : '?'}
+              </div>
+              <div className="flex-1">
+                <input ref={commentInputRef} type="text" value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  placeholder={isLoggedIn ? 'Add a comment...' : 'Sign in to comment'}
                   disabled={!isLoggedIn || commentLoading} maxLength={500}
-                  className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50" />
-                <button type="submit" disabled={!isLoggedIn || commentLoading || !commentText.trim()}
-                  className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">Post</button>
+                  className="w-full border-b border-gray-300 bg-transparent pb-1 text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50" />
+                {commentText && (
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button type="button" onClick={() => setCommentText('')}
+                      className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-full">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={commentLoading || !commentText.trim()}
+                      className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50">
+                      Comment
+                    </button>
+                  </div>
+                )}
               </div>
             </form>
-            <div className="overflow-y-auto space-y-3 flex-1">
-              {comments.length === 0 ? <p className="text-sm text-gray-400 text-center py-4">No comments yet</p> : comments.map(comment => (
-                <div key={comment.id} className="flex gap-2 group">
+
+            {/* Comment list */}
+            <div className="space-y-4">
+              {comments.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">No comments yet. Be the first!</p>
+              ) : comments.map(comment => (
+                <div key={comment.id} className="flex gap-3 group">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {comment.user.name.charAt(0).toUpperCase()}
+                  </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <Link href={`/profile/${comment.user.id}`} className="text-xs font-semibold text-gray-800 hover:text-blue-600">{comment.user.name}</Link>
-                      <span className="text-xs text-gray-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                      <Link href={`/profile/${comment.user.id}`}
+                        className="text-xs font-semibold text-gray-900 hover:text-blue-600">
+                        {comment.user.name}
+                      </Link>
+                      <span className="text-xs text-gray-400">{timeAgo(comment.createdAt)}</span>
                     </div>
                     <p className="text-sm text-gray-700">{comment.content}</p>
                   </div>
-                  {isLoggedIn && <button onClick={() => handleDeleteComment(comment.id)} className="text-gray-300 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity">✕</button>}
+                  {isLoggedIn && (
+                    <button onClick={() => handleDeleteComment(comment.id)}
+                      className="text-gray-300 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity self-start mt-1">
+                      ✕
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           </div>
-
-          {/* ── Related Videos (1 col) ── */}
-          <div className="space-y-3">
-            <h2 className="font-semibold text-gray-900">Related Videos</h2>
-            {related.length === 0 ? (
-              <p className="text-sm text-gray-400">No related videos</p>
-            ) : related.map(r => (
-              <Link key={r.id} href={`/videos/${r.id}`} className="flex gap-3 group hover:bg-white rounded-lg p-2 transition-colors">
-                <div className="relative w-28 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-900">
-                  <VideoThumbnail
-                    thumbnailUrl={r.thumbnailUrl}
-                    filePath={r.filePath}
-                    title={r.title}
-                    className="object-cover"
-                  />
-                  {r.duration && <span className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 rounded">{formatDuration(r.duration)}</span>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">{r.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{r.user.name}</p>
-                  <p className="text-xs text-gray-400">{r.viewCount.toLocaleString()} views</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-
         </div>
-      </main>
+
+        {/* ── RIGHT: related videos ── */}
+        <div className="hidden lg:block w-[400px] flex-shrink-0 space-y-3">
+          {related.length === 0 ? (
+            <p className="text-sm text-gray-400">No related videos</p>
+          ) : related.map(r => (
+            <Link key={r.id} href={`/videos/${r.id}`}
+              className="flex gap-2 group rounded-xl p-1 hover:bg-gray-100 transition-colors">
+              {/* Thumbnail */}
+              <div className="relative w-40 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-900">
+                <VideoThumbnail
+                  thumbnailUrl={r.thumbnailUrl}
+                  filePath={r.filePath}
+                  title={r.title}
+                  className="object-cover"
+                />
+                {r.duration && (
+                  <span className="absolute bottom-1 right-1 bg-black/90 text-white text-xs px-1 rounded font-medium">
+                    {formatDuration(r.duration)}
+                  </span>
+                )}
+              </div>
+              {/* Info */}
+              <div className="flex-1 min-w-0 py-0.5">
+                <p className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug mb-1">
+                  {r.title}
+                </p>
+                <p className="text-xs text-gray-500">{r.user.name}</p>
+                <p className="text-xs text-gray-400">
+                  {r.viewCount > 0 ? `${formatViews(r.viewCount)} views · ` : ''}
+                  {timeAgo(r.createdAt)}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+      </div>
     </div>
   );
 }
