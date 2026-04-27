@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { searchApi, type Video, type User } from '@/lib/api';
+import VideoThumbnail from '@/components/VideoThumbnail';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -125,19 +126,12 @@ export default function SearchPage() {
                         >
                           {/* Thumbnail */}
                           <div className="relative w-32 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-900">
-                            {video.thumbnailUrl ? (
-                              <Image
-                                src={`${API_URL}/${video.thumbnailUrl}`}
-                                alt={video.title}
-                                fill
-                                className="object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
-                                <span className="text-2xl opacity-60">🎥</span>
-                              </div>
-                            )}
+                            <VideoThumbnail
+                              thumbnailUrl={video.thumbnailUrl}
+                              filePath={video.filePath}
+                              title={video.title}
+                              className="object-cover"
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-gray-900 truncate">{video.title}</h3>

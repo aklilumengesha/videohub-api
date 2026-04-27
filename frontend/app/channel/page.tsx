@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { usersApi, videosApi, type Video } from '@/lib/api';
+import VideoThumbnail from '@/components/VideoThumbnail';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -221,13 +222,12 @@ export default function ChannelPage() {
                   {/* Thumbnail */}
                   <Link href={`/videos/${video.id}`}>
                     <div className="relative aspect-video bg-gray-900">
-                      {video.thumbnailUrl ? (
-                        <Image src={`${API_URL}/${video.thumbnailUrl}`} alt={video.title} fill className="object-cover" unoptimized />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-700">
-                          <span className="text-3xl opacity-60">🎥</span>
-                        </div>
-                      )}
+                      <VideoThumbnail
+                        thumbnailUrl={video.thumbnailUrl}
+                        filePath={video.filePath}
+                        title={video.title}
+                        className="object-cover"
+                      />
                       {/* Status badge */}
                       {video.status !== 'READY' && (
                         <div className={`absolute top-2 left-2 text-xs font-medium px-2 py-0.5 rounded ${

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { playlistsApi, type Playlist } from '@/lib/api';
+import VideoThumbnail from '@/components/VideoThumbnail';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -90,13 +91,11 @@ export default function PlaylistDetailPage() {
               <div key={item.video.id} className="flex gap-4 bg-white rounded-xl p-3 border border-gray-100">
                 <span className="text-sm text-gray-400 w-5 flex-shrink-0 pt-1">{idx + 1}</span>
                 <Link href={`/videos/${item.video.id}`} className="relative w-32 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-900">
-                  {item.video.thumbnailUrl ? (
-                    <Image src={`${API_URL}/${item.video.thumbnailUrl}`} alt={item.video.title} fill className="object-cover" unoptimized />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
-                      <span className="text-2xl opacity-60">🎥</span>
-                    </div>
-                  )}
+                  <VideoThumbnail
+                    thumbnailUrl={item.video.thumbnailUrl}
+                    title={item.video.title}
+                    className="object-cover"
+                  />
                   {item.video.duration && (
                     <span className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 rounded">
                       {formatDuration(item.video.duration)}

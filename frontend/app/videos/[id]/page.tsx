@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { videosApi, likesApi, commentsApi, playlistsApi, adminApi, type Video, type Comment, type Playlist, type VideoChapter, type VideoSubtitle } from '@/lib/api';
 import HlsPlayer from '@/components/HlsPlayer';
+import VideoThumbnail from '@/components/VideoThumbnail';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -355,11 +356,12 @@ export default function VideoPage() {
             ) : related.map(r => (
               <Link key={r.id} href={`/videos/${r.id}`} className="flex gap-3 group hover:bg-white rounded-lg p-2 transition-colors">
                 <div className="relative w-28 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-gray-900">
-                  {r.thumbnailUrl ? (
-                    <Image src={`${API_URL}/${r.thumbnailUrl}`} alt={r.title} fill className="object-cover" unoptimized />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center"><span className="text-xl opacity-60">🎥</span></div>
-                  )}
+                  <VideoThumbnail
+                    thumbnailUrl={r.thumbnailUrl}
+                    filePath={r.filePath}
+                    title={r.title}
+                    className="object-cover"
+                  />
                   {r.duration && <span className="absolute bottom-1 right-1 bg-black/80 text-white text-xs px-1 rounded">{formatDuration(r.duration)}</span>}
                 </div>
                 <div className="flex-1 min-w-0">
