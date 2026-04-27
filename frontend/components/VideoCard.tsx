@@ -1,12 +1,12 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { type Video } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-// Format seconds → "4:32" or "1:02:15"
 function formatDuration(seconds?: number): string {
   if (!seconds) return '';
   const h = Math.floor(seconds / 3600);
@@ -18,12 +18,84 @@ function formatDuration(seconds?: number): string {
 
 interface VideoCardProps {
   video: Video;
-  showChannel?: boolean; // show creator name below title
+  showChannel?: boolean;
+}
+
+/**
+ * VideoThumbnailFallback — when no server-generated thumbnail exists,
+ * load the video file in a hidden <video> element and capture its first frame
+ * onto a canvas to use as a thumbnail image.
+ */
+function VideoThumbnailFallback({ src, title }: { src: string; title: string }) {
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleLoadedData = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 360;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const url = canvas.toDataURL('image/jpeg', 0.8);
+      setDataUrl(url);
+    } catch {
+      setFailed(true);
+    }
+  };
+
+  if (failed || (!dataUrl && !src)) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
+        <span className="text-4xl opacity-60">🎥</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* Hidden video to capture first frame */}
+      {!dataUrl && (
+        <video
+          ref={videoRef}
+          src={src}
+          className="hidden"
+          preload="metadata"
+          muted
+          playsInline
+          onLoadedData={handleLoadedData}
+          onError={() => setFailed(true)}
+        />
+      )}
+      {dataUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={dataUrl}
+          alt={title}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+          <span className="text-2xl opacity-40">⏳</span>
+        </div>
+      )}
+    </>
+  );
 }
 
 export default function VideoCard({ video, showChannel = true }: VideoCardProps) {
   const thumbnailSrc = video.thumbnailUrl
     ? `${API_URL}/${video.thumbnailUrl}`
+    : null;
+
+  // Fallback video source for frame capture
+  const videoSrc = video.filePath
+    ? `${API_URL}/${video.filePath}`
+    : video.hlsUrl
+    ? null  // can't capture from HLS easily
     : null;
 
   const duration = formatDuration(video.duration);
@@ -42,8 +114,10 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            unoptimized // skip Next.js image optimization for local files
+            unoptimized
           />
+        ) : videoSrc ? (
+          <VideoThumbnailFallback src={videoSrc} title={video.title} />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
             <span className="text-4xl opacity-60">🎥</span>

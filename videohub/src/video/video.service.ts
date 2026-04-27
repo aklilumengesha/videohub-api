@@ -52,6 +52,7 @@ export class VideoService implements OnModuleInit {
         description: true,
         thumbnailUrl: true,
         hlsUrl: true,
+        filePath: true,
         likeCount: true,
         commentCount: true,
         viewCount: true,
