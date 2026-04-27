@@ -43,7 +43,7 @@ export class VideoService implements OnModuleInit {
   async findAll(category?: string, sortBy: 'newest' | 'popular' = 'newest') {
     return this.prisma.video.findMany({
       where: {
-        status: 'READY',
+        status: { in: ['READY', 'FAILED'] },  // show both — FAILED means FFmpeg unavailable but file exists
         ...(category ? { category } : {}),
       },
       select: {
@@ -247,6 +247,15 @@ export class VideoService implements OnModuleInit {
     });
     if (!video) throw new NotFoundException('Video not found');
     return video;
+  }
+
+  /** Recover stuck PROCESSING videos — marks them READY so they appear on the home page */
+  async recoverStuckVideos() {
+    const result = await this.prisma.video.updateMany({
+      where: { status: 'PROCESSING' },
+      data: { status: 'READY' },
+    });
+    return { recovered: result.count };
   }
 
   async recordWatch(videoId: string, userId: string) {

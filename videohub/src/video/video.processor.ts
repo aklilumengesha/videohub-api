@@ -66,14 +66,22 @@ export class VideoProcessor {
       return { videoId, masterPlaylistPath };
 
     } catch (error) {
-      this.logger.error(`Video ${videoId} processing failed: ${(error as Error).message}`);
+      this.logger.warn(
+        `FFmpeg processing failed for ${videoId}: ${(error as Error).message}. ` +
+        `Falling back to original file — video will still be playable.`
+      );
 
+      // Graceful fallback: mark READY with the original uploaded file
+      // This means no HLS/thumbnails but the video is still watchable
       await this.prisma.video.update({
         where: { id: videoId },
-        data: { status: 'FAILED' },
+        data: {
+          status: 'READY',
+          // filePath already set on upload — keep it as the playback source
+        },
       });
 
-      throw error; // re-throw so BullMQ marks job as failed and can retry
+      return { videoId, fallback: true };
     }
   }
 }

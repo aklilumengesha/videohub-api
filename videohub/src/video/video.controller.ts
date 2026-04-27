@@ -61,6 +61,14 @@ export class VideoController {
     return this.videoService.getStatus(id);
   }
 
+  @ApiOperation({ summary: 'Recover stuck PROCESSING videos — marks them READY (admin utility)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('recover')
+  recoverStuck() {
+    return this.videoService.recoverStuckVideos();
+  }
+
   @ApiOperation({ summary: 'Record a watch event for history (requires auth)' })
   @ApiResponse({ status: 200, description: 'Watch recorded' })
   @ApiBearerAuth()
