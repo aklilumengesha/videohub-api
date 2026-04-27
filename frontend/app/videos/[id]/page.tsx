@@ -66,6 +66,10 @@ export default function VideoPage() {
   const [reportDone, setReportDone] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Autoplay next video
+  const [autoplayCountdown, setAutoplayCountdown] = useState<number | null>(null);
+  const autoplayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const handleShare = () => {
     const url = window.location.href;
     navigator.clipboard.writeText(url).then(() => {
@@ -173,6 +177,32 @@ export default function VideoPage() {
     finally { setReporting(false); setShowReportMenu(false); }
   };
 
+  // Autoplay: start countdown when video ends, navigate to first related video
+  const startAutoplay = () => {
+    if (related.length === 0) return;
+    setAutoplayCountdown(5);
+    autoplayTimerRef.current = setInterval(() => {
+      setAutoplayCountdown(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(autoplayTimerRef.current!);
+          router.push(`/videos/${related[0].id}`);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const cancelAutoplay = () => {
+    if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current);
+    setAutoplayCountdown(null);
+  };
+
+  // Clean up timer on unmount or video change
+  useEffect(() => {
+    return () => { if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current); };
+  }, [id]);
+
   useKeyboardShortcuts({
     onPlayPause: () => {
       const v = document.querySelector('video') as HTMLVideoElement | null;
@@ -223,7 +253,7 @@ export default function VideoPage() {
         <div className="flex-1 min-w-0 space-y-4">
 
           {/* Player */}
-          <div className="w-full aspect-video bg-black rounded-xl overflow-hidden">
+          <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
             {video.status === 'PROCESSING' ? (
               <div className="w-full h-full flex items-center justify-center text-white">
                 <div className="text-center"><div className="text-3xl mb-2">⏳</div><p className="text-sm">Processing...</p></div>
@@ -235,9 +265,11 @@ export default function VideoPage() {
                 poster={video.thumbnailUrl ? `${API_URL}/${video.thumbnailUrl}` : undefined}
                 subtitles={subtitles}
                 className="w-full h-full"
+                onEnded={startAutoplay}
               />
             ) : video.filePath ? (
-              <video src={`${API_URL}/${video.filePath}`} controls className="w-full h-full" preload="metadata">
+              <video src={`${API_URL}/${video.filePath}`} controls className="w-full h-full" preload="metadata"
+                onEnded={startAutoplay}>
                 {subtitles.map((sub, i) => (
                   <track key={sub.id} kind="subtitles" src={`${API_URL}/${sub.filePath}`}
                     srcLang={sub.language} label={sub.label} default={i === 0} />
@@ -246,6 +278,39 @@ export default function VideoPage() {
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-400">
                 <span className="text-4xl">🎬</span>
+              </div>
+            )}
+
+            {/* Autoplay countdown overlay */}
+            {autoplayCountdown !== null && related.length > 0 && (
+              <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-xl">
+                <div className="text-center text-white max-w-xs px-4">
+                  <p className="text-sm text-gray-300 mb-2">Up next</p>
+                  <p className="font-semibold text-base line-clamp-2 mb-4">{related[0].title}</p>
+                  {/* Circular countdown */}
+                  <div className="relative w-16 h-16 mx-auto mb-4">
+                    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                      <circle cx="32" cy="32" r="28" fill="none" stroke="#374151" strokeWidth="4" />
+                      <circle cx="32" cy="32" r="28" fill="none" stroke="white" strokeWidth="4"
+                        strokeDasharray={`${2 * Math.PI * 28}`}
+                        strokeDashoffset={`${2 * Math.PI * 28 * (1 - autoplayCountdown / 5)}`}
+                        className="transition-all duration-1000 ease-linear" />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-xl font-bold">
+                      {autoplayCountdown}
+                    </span>
+                  </div>
+                  <div className="flex gap-3 justify-center">
+                    <button onClick={cancelAutoplay}
+                      className="px-4 py-2 rounded-full border border-white/30 text-sm hover:bg-white/10 transition-colors">
+                      Cancel
+                    </button>
+                    <button onClick={() => { cancelAutoplay(); router.push(`/videos/${related[0].id}`); }}
+                      className="px-4 py-2 rounded-full bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors">
+                      Play now
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

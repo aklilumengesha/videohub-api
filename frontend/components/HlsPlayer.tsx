@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 
 interface HlsPlayerProps {
-  hlsUrl: string;       // URL to master.m3u8
-  fallbackUrl?: string; // fallback direct video URL if HLS not available
-  poster?: string;      // thumbnail URL
+  hlsUrl: string;
+  fallbackUrl?: string;
+  poster?: string;
   className?: string;
   autoPlay?: boolean;
   onTimeUpdate?: (currentTime: number) => void;
+  onEnded?: () => void;
   subtitles?: Array<{ id: string; language: string; label: string; filePath: string }>;
 }
 
@@ -19,6 +20,7 @@ export default function HlsPlayer({
   className = '',
   autoPlay = false,
   onTimeUpdate,
+  onEnded,
   subtitles = [],
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -120,6 +122,7 @@ export default function HlsPlayer({
         className="w-full h-full"
         preload="metadata"
         onTimeUpdate={handleTimeUpdate}
+        onEnded={onEnded}
         playsInline
       >
         {subtitles.map((sub, i) => (
