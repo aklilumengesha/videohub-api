@@ -176,6 +176,9 @@ export const usersApi = {
   unfollow: (id: string) =>
     apiFetch(`/users/${id}/follow`, { method: 'DELETE' }),
 
+  isFollowing: (id: string) =>
+    apiFetch(`/users/${id}/is-following`),
+
   uploadAvatar: (file: File) => {
     const formData = new FormData();
     formData.append('avatar', file);

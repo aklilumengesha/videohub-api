@@ -35,9 +35,15 @@ export default function ProfilePage() {
     ]).then(([p, v]) => {
       setProfile(p);
       setVideos(v);
+      // Check if current user is already following (non-blocking)
+      if (isLoggedIn) {
+        usersApi.isFollowing(id)
+          .then((r: { isFollowing: boolean }) => setFollowing(r.isFollowing))
+          .catch(() => {});
+      }
     }).catch(() => setError('User not found'))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, isLoggedIn]);
 
   const handleFollow = async () => {
     if (!isLoggedIn) { router.push('/auth/login'); return; }

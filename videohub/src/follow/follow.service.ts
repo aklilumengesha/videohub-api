@@ -78,4 +78,11 @@ export class FollowService {
       },
     });
   }
+
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    const record = await this.prisma.follow.findUnique({
+      where: { followerId_followingId: { followerId, followingId } },
+    });
+    return !!record;
+  }
 }

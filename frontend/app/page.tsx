@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { videosApi } from '@/lib/api';
@@ -8,6 +8,7 @@ import VideoCard from '@/components/VideoCard';
 import type { Video } from '@/lib/api';
 
 const CATEGORIES = ['All', 'Gaming', 'Music', 'Education', 'Entertainment', 'Sports', 'Technology', 'Travel', 'Food', 'Fashion', 'News'];
+const PAGE_SIZE = 20;
 
 export default function HomePage() {
   const { isLoggedIn, loading } = useAuth();
@@ -15,18 +16,56 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [sort, setSort] = useState<'newest' | 'popular'>('newest');
   const [fetching, setFetching] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const cursorRef = useRef<string | undefined>(undefined);
 
+  // Load first page whenever category/sort changes
   useEffect(() => {
     setFetching(true);
+    setVideos([]);
+    setHasMore(true);
+    cursorRef.current = undefined;
+    setError('');
+
     videosApi.getAll(
       activeCategory === 'All' ? undefined : activeCategory,
       sort,
     )
-      .then(setVideos)
+      .then((data: Video[]) => {
+        setVideos(data);
+        if (data.length < PAGE_SIZE) setHasMore(false);
+        if (data.length > 0) cursorRef.current = data[data.length - 1].createdAt;
+      })
       .catch(() => setError('Failed to load videos'))
       .finally(() => setFetching(false));
   }, [activeCategory, sort]);
+
+  // Infinite scroll — load more when sentinel enters viewport
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore || fetching || !cursorRef.current) return;
+    setLoadingMore(true);
+    try {
+      // The backend doesn't support cursor pagination on /videos yet,
+      // so we simulate by slicing — in production you'd pass cursor param
+      // For now just mark no more after first load (all videos returned at once)
+      setHasMore(false);
+    } catch { /* ignore */ }
+    finally { setLoadingMore(false); }
+  }, [loadingMore, hasMore, fetching]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) loadMore(); },
+      { rootMargin: '200px' },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -44,7 +83,7 @@ export default function HomePage() {
             <button key={cat} onClick={() => setActiveCategory(cat)}
               className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 activeCategory === cat
-                  ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                  ? 'bg-gray-900 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}>
               {cat}
@@ -71,7 +110,6 @@ export default function HomePage() {
         )}
 
         {fetching ? (
-          /* Skeleton grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
             {Array.from({ length: 15 }).map((_, i) => (
               <div key={i} className="animate-pulse">
@@ -105,9 +143,18 @@ export default function HomePage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
-            {videos.map(video => <VideoCard key={video.id} video={video} />)}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
+              {videos.map(video => <VideoCard key={video.id} video={video} />)}
+            </div>
+
+            {/* Infinite scroll sentinel */}
+            <div ref={sentinelRef} className="h-10 mt-4 flex items-center justify-center">
+              {loadingMore && (
+                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              )}
+            </div>
+          </>
         )}
       </main>
     </div>

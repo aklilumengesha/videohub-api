@@ -39,6 +39,19 @@ export class FollowController {
     return this.followService.unfollow(userId, req.user.userId);
   }
 
+  @ApiOperation({ summary: 'Check if the current user is following a user' })
+  @ApiResponse({ status: 200, description: 'Returns { isFollowing: boolean }' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('is-following')
+  async isFollowing(
+    @Param('userId') userId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    const result = await this.followService.isFollowing(req.user.userId, userId);
+    return { isFollowing: result };
+  }
+
   @ApiOperation({ summary: 'Get followers of a user' })
   @ApiResponse({ status: 200, description: 'Returns list of followers' })
   @ApiResponse({ status: 404, description: 'User not found' })
