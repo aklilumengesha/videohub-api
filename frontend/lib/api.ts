@@ -68,6 +68,7 @@ export interface Video {
   hlsUrl?: string;
   thumbnailUrl?: string;
   likeCount: number;
+  dislikeCount?: number;
   commentCount: number;
   viewCount: number;
   duration?: number;
@@ -258,6 +259,14 @@ export const likesApi = {
 
   unlike: (videoId: string) =>
     apiFetch(`/videos/${videoId}/like`, { method: 'DELETE' }),
+
+  isDisliked: (videoId: string) => apiFetch(`/videos/${videoId}/dislike`),
+
+  dislike: (videoId: string) =>
+    apiFetch(`/videos/${videoId}/dislike`, { method: 'POST' }),
+
+  undislike: (videoId: string) =>
+    apiFetch(`/videos/${videoId}/dislike`, { method: 'DELETE' }),
 };
 
 // ── Comments API ──────────────────────────────────────────────────────────────

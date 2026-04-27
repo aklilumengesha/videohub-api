@@ -26,6 +26,7 @@ model User {
   followers           Follow[]       @relation("following")
   notifications       Notification[] @relation("recipient")
   sentNotifications   Notification[] @relation("actor")
+  dislikes            Dislike[]
   watchHistory        WatchHistory[]
   playlists           Playlist[]
   reports             VideoReport[]
@@ -40,6 +41,7 @@ model Video {
   thumbnailUrl String?     // path to generated JPEG thumbnail
   userId       String
   likeCount    Int         @default(0)
+  dislikeCount Int         @default(0)
   commentCount Int         @default(0)
   viewCount    Int         @default(0)
   status       VideoStatus @default(PROCESSING)
@@ -51,6 +53,7 @@ model Video {
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   likes    Like[]
+  dislikes Dislike[]
   comments Comment[]
   watchHistory WatchHistory[]
   playlists    PlaylistVideo[]
@@ -79,9 +82,22 @@ model Like {
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
-  @@id([userId, videoId])  // composite key — one like per user per video
-  @@index([videoId])       // fast "count likes for a video" queries
-  @@index([userId])        // fast "videos liked by a user" queries
+  @@id([userId, videoId])
+  @@index([videoId])
+  @@index([userId])
+}
+
+model Dislike {
+  userId  String
+  videoId String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@id([userId, videoId])  // one dislike per user per video
+  @@index([videoId])
+  @@index([userId])
 }
 
 model Comment {

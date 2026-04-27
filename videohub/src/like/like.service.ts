@@ -58,4 +58,53 @@ export class LikeService {
     });
     return { liked: !!record };
   }
+
+  async dislike(videoId: string, userId: string) {
+    const video = await this.prisma.video.findUnique({ where: { id: videoId } });
+    if (!video) throw new NotFoundException('Video not found');
+
+    const existing = await this.prisma.dislike.findUnique({
+      where: { userId_videoId: { userId, videoId } },
+    });
+    if (existing) throw new ConflictException('Video already disliked');
+
+    // Remove like if exists (can't like and dislike simultaneously)
+    const liked = await this.prisma.like.findUnique({
+      where: { userId_videoId: { userId, videoId } },
+    });
+    if (liked) {
+      await this.prisma.$transaction([
+        this.prisma.like.delete({ where: { userId_videoId: { userId, videoId } } }),
+        this.prisma.video.update({ where: { id: videoId }, data: { likeCount: { decrement: 1 } } }),
+      ]);
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.dislike.create({ data: { userId, videoId } }),
+      this.prisma.video.update({ where: { id: videoId }, data: { dislikeCount: { increment: 1 } } }),
+    ]);
+
+    return { message: 'Video disliked', videoId };
+  }
+
+  async undislike(videoId: string, userId: string) {
+    const existing = await this.prisma.dislike.findUnique({
+      where: { userId_videoId: { userId, videoId } },
+    });
+    if (!existing) throw new NotFoundException('Dislike not found');
+
+    await this.prisma.$transaction([
+      this.prisma.dislike.delete({ where: { userId_videoId: { userId, videoId } } }),
+      this.prisma.video.update({ where: { id: videoId }, data: { dislikeCount: { decrement: 1 } } }),
+    ]);
+
+    return { message: 'Dislike removed', videoId };
+  }
+
+  async isDisliked(videoId: string, userId: string): Promise<{ disliked: boolean }> {
+    const record = await this.prisma.dislike.findUnique({
+      where: { userId_videoId: { userId, videoId } },
+    });
+    return { disliked: !!record };
+  }
 }

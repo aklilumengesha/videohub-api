@@ -24,6 +24,7 @@ export default function HlsPlayer({
   subtitles = [],
 }: HlsPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<import('hls.js').default | null>(null);
   const [quality, setQuality] = useState<string>('auto');
   const [availableQualities, setAvailableQualities] = useState<string[]>([]);
   const [error, setError] = useState(false);
@@ -39,40 +40,35 @@ export default function HlsPlayer({
 
       if (Hls.isSupported()) {
         hls = new Hls({
-          // Start with lowest quality for fast initial load
-          startLevel: -1,          // -1 = auto
+          startLevel: -1,        // -1 = auto ABR
           autoStartLoad: true,
-          maxBufferLength: 30,      // buffer 30 seconds ahead
+          maxBufferLength: 30,
           maxMaxBufferLength: 60,
         });
 
+        hlsRef.current = hls;
         hls.loadSource(hlsUrl);
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
-          // Extract quality level names from the manifest
           const levels = data.levels.map((l) =>
             l.height ? `${l.height}p` : `${Math.round((l.bitrate ?? 0) / 1000)}k`
           );
           setAvailableQualities(['auto', ...levels]);
+          setQuality('auto');
 
-          if (autoPlay) {
-            video.play().catch(() => {});
-          }
+          if (autoPlay) video.play().catch(() => {});
         });
 
         hls.on(Hls.Events.ERROR, (_event, data) => {
-          if (data.fatal) {
-            setError(true);
-          }
+          if (data.fatal) setError(true);
         });
 
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari has native HLS support
+        // Safari native HLS
         video.src = hlsUrl;
         if (autoPlay) video.play().catch(() => {});
       } else if (fallbackUrl) {
-        // No HLS support at all — use direct file
         video.src = fallbackUrl;
       } else {
         setError(true);
@@ -83,17 +79,27 @@ export default function HlsPlayer({
 
     return () => {
       hls?.destroy();
+      hlsRef.current = null;
     };
   }, [hlsUrl, fallbackUrl, autoPlay]);
 
-  const handleQualityChange = async (selectedQuality: string) => {
-    const Hls = (await import('hls.js')).default;
-    const video = videoRef.current;
-    if (!video) return;
+  const handleQualityChange = (selectedQuality: string) => {
+    const hls = hlsRef.current;
+    if (!hls) return;
 
-    // Re-initialize with selected quality level
-    // In a full implementation you'd use hls.currentLevel
     setQuality(selectedQuality);
+
+    if (selectedQuality === 'auto') {
+      // Re-enable ABR
+      hls.currentLevel = -1;
+    } else {
+      // Find the level index matching the selected quality label
+      const idx = hls.levels.findIndex((l) => {
+        const label = l.height ? `${l.height}p` : `${Math.round((l.bitrate ?? 0) / 1000)}k`;
+        return label === selectedQuality;
+      });
+      if (idx !== -1) hls.currentLevel = idx;
+    }
   };
 
   const handleTimeUpdate = () => {
@@ -137,7 +143,7 @@ export default function HlsPlayer({
         ))}
       </video>
 
-      {/* Quality selector — shown when multiple qualities are available */}
+      {/* Quality selector */}
       {availableQualities.length > 1 && (
         <div className="absolute bottom-12 right-3 z-10">
           <select

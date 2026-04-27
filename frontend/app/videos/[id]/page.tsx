@@ -47,6 +47,7 @@ export default function VideoPage() {
   const [commentText, setCommentText] = useState('');
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [disliked, setDisliked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
   const [error, setError] = useState('');
@@ -110,6 +111,7 @@ export default function VideoPage() {
       // Load like state for logged-in users (non-blocking)
       if (isLoggedIn) {
         likesApi.isLiked(id).then((res: { liked: boolean }) => setLiked(res.liked)).catch(() => {});
+        likesApi.isDisliked(id).then((res: { disliked: boolean }) => setDisliked(res.disliked)).catch(() => {});
       }
       videosApi.getChapters(id).then((ch: VideoChapter[]) => setChapters(ch)).catch(() => {});
       videosApi.getSubtitles(id).then((s: VideoSubtitle[]) => setSubtitles(s)).catch(() => {});
@@ -122,8 +124,17 @@ export default function VideoPage() {
     if (!isLoggedIn) { router.push('/auth/login'); return; }
     try {
       if (liked) { await likesApi.unlike(id); setLikeCount(c => c - 1); }
-      else { await likesApi.like(id); setLikeCount(c => c + 1); }
+      else { await likesApi.like(id); setLikeCount(c => c + 1); if (disliked) setDisliked(false); }
       setLiked(l => !l);
+    } catch { /* ignore */ }
+  };
+
+  const handleDislike = async () => {
+    if (!isLoggedIn) { router.push('/auth/login'); return; }
+    try {
+      if (disliked) { await likesApi.undislike(id); }
+      else { await likesApi.dislike(id); if (liked) { setLiked(false); setLikeCount(c => c - 1); } }
+      setDisliked(d => !d);
     } catch { /* ignore */ }
   };
 
@@ -339,17 +350,29 @@ export default function VideoPage() {
 
             {/* Action buttons — YouTube pill style */}
             <div className="flex items-center gap-2 flex-wrap">
-              {/* Like */}
-              <button onClick={handleLike}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  liked ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}>
-                <svg className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                </svg>
-                {likeCount > 0 ? likeCount.toLocaleString() : 'Like'}
-              </button>
+              {/* Like + Dislike — YouTube pill style */}
+              <div className="flex items-center rounded-full overflow-hidden bg-gray-100">
+                <button onClick={handleLike}
+                  className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors border-r border-gray-200 ${
+                    liked ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-200'
+                  }`}>
+                  <svg className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                  </svg>
+                  {likeCount > 0 ? likeCount.toLocaleString() : 'Like'}
+                </button>
+                <button onClick={handleDislike}
+                  className={`flex items-center px-3 py-2 text-sm font-medium transition-colors ${
+                    disliked ? 'bg-gray-700 text-white' : 'text-gray-700 hover:bg-gray-200'
+                  }`}
+                  title="Dislike">
+                  <svg className="w-4 h-4" fill={disliked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a2 2 0 002 2h.095c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                  </svg>
+                </button>
+              </div>
 
               {/* Share */}
               <button onClick={handleShare}

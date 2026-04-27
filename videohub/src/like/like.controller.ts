@@ -9,7 +9,6 @@ export class LikeController {
   constructor(private readonly likeService: LikeService) {}
 
   @ApiOperation({ summary: 'Check if the current user has liked a video' })
-  @ApiResponse({ status: 200, description: 'Returns { liked: boolean }' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Get()
@@ -21,10 +20,6 @@ export class LikeController {
   }
 
   @ApiOperation({ summary: 'Like a video (requires auth)' })
-  @ApiResponse({ status: 201, description: 'Video liked successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Video not found' })
-  @ApiResponse({ status: 409, description: 'Video already liked' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -36,9 +31,6 @@ export class LikeController {
   }
 
   @ApiOperation({ summary: 'Unlike a video (requires auth)' })
-  @ApiResponse({ status: 200, description: 'Video unliked successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Like not found' })
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
@@ -48,5 +40,45 @@ export class LikeController {
     @Request() req: { user: { userId: string } },
   ) {
     return this.likeService.unlike(videoId, req.user.userId);
+  }
+}
+
+@ApiTags('dislikes')
+@Controller('videos/:videoId/dislike')
+export class DislikeController {
+  constructor(private readonly likeService: LikeService) {}
+
+  @ApiOperation({ summary: 'Check if the current user has disliked a video' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  isDisliked(
+    @Param('videoId') videoId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.likeService.isDisliked(videoId, req.user.userId);
+  }
+
+  @ApiOperation({ summary: 'Dislike a video (requires auth)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post()
+  dislike(
+    @Param('videoId') videoId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.likeService.dislike(videoId, req.user.userId);
+  }
+
+  @ApiOperation({ summary: 'Remove dislike from a video (requires auth)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @Delete()
+  undislike(
+    @Param('videoId') videoId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.likeService.undislike(videoId, req.user.userId);
   }
 }
