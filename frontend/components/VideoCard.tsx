@@ -1,8 +1,11 @@
 'use client';
 
+import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { type Video } from '@/lib/api';
 import VideoThumbnail from './VideoThumbnail';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 function formatDuration(seconds?: number): string {
   if (!seconds) return '';
@@ -39,28 +42,77 @@ interface VideoCardProps {
 
 export default function VideoCard({ video, showChannel = true }: VideoCardProps) {
   const duration = formatDuration(video.duration);
+  const [showPreview, setShowPreview] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Video source for preview — prefer filePath (direct), skip HLS (too slow to start)
+  const previewSrc = video.filePath ? `${API_URL}/${video.filePath}` : null;
+
+  const handleMouseEnter = useCallback(() => {
+    if (!previewSrc) return;
+    hoverTimerRef.current = setTimeout(() => {
+      setShowPreview(true);
+      // Small delay to let the video element mount before playing
+      setTimeout(() => {
+        videoRef.current?.play().catch(() => {});
+      }, 50);
+    }, 1000); // 1 second hover delay
+  }, [previewSrc]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    setShowPreview(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  }, []);
 
   return (
-    <Link href={`/videos/${video.id}`} className="group block">
-      {/* Thumbnail — 16:9, no border radius on the card itself */}
+    <Link href={`/videos/${video.id}`} className="group block"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}>
+      {/* Thumbnail / Preview */}
       <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-900">
-        <VideoThumbnail
-          thumbnailUrl={video.thumbnailUrl}
-          filePath={video.filePath}
-          title={video.title}
-          className="object-cover group-hover:scale-105 transition-transform duration-200"
-        />
+        {/* Static thumbnail — always rendered */}
+        <div className={`absolute inset-0 transition-opacity duration-300 ${showPreview ? 'opacity-0' : 'opacity-100'}`}>
+          <VideoThumbnail
+            thumbnailUrl={video.thumbnailUrl}
+            filePath={video.filePath}
+            title={video.title}
+            className="object-cover group-hover:scale-105 transition-transform duration-200"
+          />
+        </div>
+
+        {/* Muted video preview — fades in on hover */}
+        {previewSrc && (
+          <video
+            ref={videoRef}
+            src={previewSrc}
+            muted
+            loop
+            playsInline
+            preload="none"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+              showPreview ? 'opacity-100' : 'opacity-0'
+            }`}
+          />
+        )}
 
         {/* Duration badge */}
         {duration && (
-          <span className="absolute bottom-1.5 right-1.5 bg-black/90 text-white text-xs font-medium px-1.5 py-0.5 rounded">
+          <span className="absolute bottom-1.5 right-1.5 bg-black/90 text-white text-xs font-medium px-1.5 py-0.5 rounded z-10">
             {duration}
           </span>
         )}
 
         {/* Processing overlay */}
         {video.status === 'PROCESSING' && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-xl">
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-xl z-10">
             <span className="text-white text-xs font-medium bg-yellow-500 px-2 py-1 rounded">
               Processing...
             </span>
@@ -70,7 +122,6 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
 
       {/* Info — YouTube style: no card, just text below thumbnail */}
       <div className="mt-3 flex gap-3">
-        {/* Channel avatar placeholder */}
         {showChannel && (
           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 flex items-center justify-center text-white text-sm font-bold mt-0.5">
             {video.user.name.charAt(0).toUpperCase()}
@@ -78,19 +129,16 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
         )}
 
         <div className="flex-1 min-w-0">
-          {/* Title — 2 lines max, bold */}
           <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug mb-1">
             {video.title}
           </h3>
 
-          {/* Channel name */}
           {showChannel && (
             <p className="text-xs text-gray-500 hover:text-gray-700 truncate mb-0.5">
               {video.user.name}
             </p>
           )}
 
-          {/* Views · time */}
           <p className="text-xs text-gray-500">
             {video.viewCount > 0 ? `${formatViews(video.viewCount)} · ` : ''}
             {timeAgo(video.createdAt)}
