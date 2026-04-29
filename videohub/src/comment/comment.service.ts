@@ -20,8 +20,12 @@ export class CommentService {
         select: {
           id: true,
           content: true,
+          likeCount: true,
+          isPinned: true,
+          isHearted: true,
           createdAt: true,
-          user: { select: { id: true, name: true } },
+          user: { select: { id: true, name: true, avatarUrl: true } },
+          _count: { select: { replies: true } },
         },
       }),
       this.prisma.video.update({

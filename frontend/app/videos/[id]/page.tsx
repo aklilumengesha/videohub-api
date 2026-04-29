@@ -210,10 +210,13 @@ export default function VideoPage() {
     setCommentLoading(true);
     try {
       const newComment = await commentsApi.create(id, commentText.trim());
-      setComments(prev => [newComment, ...prev]);
+      // Refresh full list to get consistent data from server
+      const updated = await commentsApi.getAll(id, undefined, commentSort);
+      setComments(updated);
       setCommentText('');
-    } catch { /* ignore */ }
-    finally { setCommentLoading(false); }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to post comment. Please try again.');
+    } finally { setCommentLoading(false); }
   };
 
   const handleDeleteComment = async (commentId: string) => {
