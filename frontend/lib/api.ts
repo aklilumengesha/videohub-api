@@ -227,8 +227,14 @@ export const videosApi = {
   remove: (id: string) =>
     apiFetch(`/videos/${id}`, { method: 'DELETE' }),
 
-  recordWatch: (id: string) =>
-    apiFetch(`/videos/${id}/watch`, { method: 'POST' }),
+  recordWatch: (id: string, progress?: number) =>
+    apiFetch(`/videos/${id}/watch`, { 
+      method: 'POST',
+      body: JSON.stringify({ progress }),
+    }),
+
+  getProgress: (id: string) =>
+    apiFetch(`/videos/${id}/progress`),
 
   getChapters: (id: string) => apiFetch(`/videos/${id}/chapters`),
 

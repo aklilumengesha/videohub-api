@@ -261,14 +261,44 @@ export class VideoService implements OnModuleInit {
     return { recovered: result.count };
   }
 
-  async recordWatch(videoId: string, userId: string) {
-    // Upsert — creates entry or updates watchedAt if already exists
+  async recordWatch(videoId: string, userId: string, progress?: number) {
+    // Get video duration to calculate if completed
+    const video = await this.prisma.video.findUnique({
+      where: { id: videoId },
+      select: { duration: true },
+    });
+
+    if (!video) throw new NotFoundException('Video not found');
+
+    const completed = progress && video.duration 
+      ? progress >= video.duration * 0.9  // 90% watched = completed
+      : false;
+
+    // Upsert — creates entry or updates watchedAt + progress if already exists
     await this.prisma.watchHistory.upsert({
       where: { userId_videoId: { userId, videoId } },
-      create: { userId, videoId },
-      update: { watchedAt: new Date() },
+      create: { 
+        userId, 
+        videoId, 
+        progress: progress ?? 0,
+        completed,
+      },
+      update: { 
+        watchedAt: new Date(),
+        progress: progress ?? 0,
+        completed,
+      },
     });
-    return { message: 'Watch recorded' };
+    return { message: 'Watch recorded', progress, completed };
+  }
+
+  async getProgress(videoId: string, userId: string) {
+    const history = await this.prisma.watchHistory.findUnique({
+      where: { userId_videoId: { userId, videoId } },
+      select: { progress: true, completed: true },
+    });
+
+    return history ?? { progress: 0, completed: false };
   }
 
   async getChapters(videoId: string) {

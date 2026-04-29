@@ -77,8 +77,21 @@ export class VideoController {
   recordWatch(
     @Param('id') id: string,
     @Request() req: { user: { userId: string } },
+    @Body() body?: { progress?: number },
   ) {
-    return this.videoService.recordWatch(id, req.user.userId);
+    return this.videoService.recordWatch(id, req.user.userId, body?.progress);
+  }
+
+  @ApiOperation({ summary: 'Get watch progress for a video (requires auth)' })
+  @ApiResponse({ status: 200, description: 'Returns progress in seconds' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/progress')
+  getProgress(
+    @Param('id') id: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.videoService.getProgress(id, req.user.userId);
   }
 
   @ApiOperation({ summary: 'Get chapters for a video' })

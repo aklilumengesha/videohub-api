@@ -61,6 +61,8 @@ export default function VideoPage() {
 
   const [chapters, setChapters] = useState<VideoChapter[]>([]);
   const [subtitles, setSubtitles] = useState<VideoSubtitle[]>([]);
+  const [initialTime, setInitialTime] = useState(0);
+  const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -116,10 +118,13 @@ export default function VideoPage() {
       if (isLoggedIn) {
         likesApi.isLiked(id).then((res: { liked: boolean }) => setLiked(res.liked)).catch(() => {});
         likesApi.isDisliked(id).then((res: { disliked: boolean }) => setDisliked(res.disliked)).catch(() => {});
+        // Load watch progress to resume where left off
+        videosApi.getProgress(id).then((res: { progress: number }) => {
+          if (res.progress > 10) setInitialTime(res.progress);
+        }).catch(() => {});
       }
       videosApi.getChapters(id).then((ch: VideoChapter[]) => setChapters(ch)).catch(() => {});
       videosApi.getSubtitles(id).then((s: VideoSubtitle[]) => setSubtitles(s)).catch(() => {});
-      videosApi.recordWatch(id).catch(() => {});
     }).catch(() => setError('Video not found'))
       .finally(() => setLoading(false));
   }, [id, isLoggedIn]);
@@ -183,6 +188,22 @@ export default function VideoPage() {
     const el = document.querySelector('video') as HTMLVideoElement | null;
     if (el) { el.currentTime = seconds; el.play().catch(() => {}); }
   };
+
+  // Save progress every 5 seconds while watching
+  const handleTimeUpdate = (currentTime: number) => {
+    if (!isLoggedIn) return;
+    if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
+    progressSaveTimerRef.current = setTimeout(() => {
+      videosApi.recordWatch(id, Math.floor(currentTime)).catch(() => {});
+    }, 5000);
+  };
+
+  // Clean up progress save timer
+  useEffect(() => {
+    return () => {
+      if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
+    };
+  }, [id]);
 
   const handleReport = async (reason: string) => {
     if (!isLoggedIn) { router.push('/auth/login'); return; }
@@ -291,7 +312,10 @@ export default function VideoPage() {
                 fallbackUrl={video.filePath ? `${API_URL}/${video.filePath}` : undefined}
                 poster={video.thumbnailUrl ? `${API_URL}/${video.thumbnailUrl}` : undefined}
                 subtitles={subtitles}
+                chapters={chapters}
+                initialTime={initialTime}
                 className="w-full h-full"
+                onTimeUpdate={handleTimeUpdate}
                 onEnded={startAutoplay}
               />
             ) : video.filePath ? (

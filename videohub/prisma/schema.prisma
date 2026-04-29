@@ -27,6 +27,7 @@ model User {
   notifications       Notification[] @relation("recipient")
   sentNotifications   Notification[] @relation("actor")
   dislikes            Dislike[]
+  commentLikes        CommentLike[]
   watchHistory        WatchHistory[]
   playlists           Playlist[]
   reports             VideoReport[]
@@ -100,19 +101,33 @@ model Dislike {
   @@index([userId])
 }
 
+model CommentLike {
+  userId    String
+  commentId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId],    references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])  // one like per user per comment
+  @@index([commentId])
+}
+
 model Comment {
   id        String   @id @default(uuid())
   content   String
   userId    String
   videoId   String
+  likeCount Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  likes CommentLike[]
 
-  @@index([videoId])  // fast "get comments for a video" queries
-  @@index([userId])   // fast "get comments by a user" queries
+  @@index([videoId])
+  @@index([userId])
 }
 
 model Follow {
@@ -153,9 +168,11 @@ enum NotificationType {
 }
 
 model WatchHistory {
-  userId    String
-  videoId   String
-  watchedAt DateTime @default(now()) @updatedAt  // upsert updates this timestamp
+  userId       String
+  videoId      String
+  watchedAt    DateTime @default(now()) @updatedAt  // upsert updates this timestamp
+  progress     Int      @default(0)                  // seconds watched (for resume)
+  completed    Boolean  @default(false)              // watched > 90% of duration
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)

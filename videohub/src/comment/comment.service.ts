@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { NotificationService } from '../notification/notification.service';
@@ -78,5 +78,36 @@ export class CommentService {
     ]);
 
     return { message: 'Comment deleted' };
+  }
+
+  async likeComment(commentId: string, userId: string) {
+    const comment = await this.prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) throw new NotFoundException('Comment not found');
+
+    const existing = await this.prisma.commentLike.findUnique({
+      where: { userId_commentId: { userId, commentId } },
+    });
+    if (existing) throw new ConflictException('Comment already liked');
+
+    await this.prisma.$transaction([
+      this.prisma.commentLike.create({ data: { userId, commentId } }),
+      this.prisma.comment.update({ where: { id: commentId }, data: { likeCount: { increment: 1 } } }),
+    ]);
+
+    return { message: 'Comment liked' };
+  }
+
+  async unlikeComment(commentId: string, userId: string) {
+    const existing = await this.prisma.commentLike.findUnique({
+      where: { userId_commentId: { userId, commentId } },
+    });
+    if (!existing) throw new NotFoundException('Like not found');
+
+    await this.prisma.$transaction([
+      this.prisma.commentLike.delete({ where: { userId_commentId: { userId, commentId } } }),
+      this.prisma.comment.update({ where: { id: commentId }, data: { likeCount: { decrement: 1 } } }),
+    ]);
+
+    return { message: 'Comment unliked' };
   }
 }
