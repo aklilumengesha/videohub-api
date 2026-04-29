@@ -25,6 +25,18 @@ export default function HomePage() {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
 
+  // Keep useCallback BEFORE any early returns — Rules of Hooks
+  const handleLoadMore = useCallback(() => {
+    if (loadingMoreGrid) return;
+    if (visibleCount < allVideos.length) {
+      setLoadingMoreGrid(true);
+      setTimeout(() => {
+        setVisibleCount(c => Math.min(c + 20, allVideos.length));
+        setLoadingMoreGrid(false);
+      }, 300);
+    }
+  }, [loadingMoreGrid, visibleCount, allVideos.length]);
+
   // Load videos on mount and when category changes
   useEffect(() => {
     setFetching(true);
@@ -33,35 +45,29 @@ export default function HomePage() {
 
     const loadData = async () => {
       try {
-        // Load all videos
         const all = await videosApi.getAll(
           activeCategory === 'All' ? undefined : activeCategory,
           'newest'
         );
         setAllVideos(all);
 
-        // Load trending (only on "All" category)
         if (activeCategory === 'All') {
           const trending = await videosApi.getTrending().catch(() => []);
           setTrendingVideos(trending.slice(0, 10));
 
-          // Load personalized feed for logged-in users
           if (isLoggedIn) {
             const personalized = await feedApi.getPersonalized().catch(() => []);
             setPersonalizedVideos(personalized.slice(0, 10));
           }
 
-          // Load videos by category for shelves
           const categories = ['Gaming', 'Music', 'Education', 'Entertainment'];
           const categoryData: Record<string, Video[]> = {};
-          
           await Promise.all(
             categories.map(async (cat) => {
               const videos = await videosApi.getAll(cat, 'popular').catch(() => []);
               categoryData[cat] = videos.slice(0, 10);
             })
           );
-          
           setCategoryVideos(categoryData);
         }
       } catch {
@@ -79,17 +85,6 @@ export default function HomePage() {
       <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
     </div>
   );
-
-  const handleLoadMore = useCallback(() => {
-    if (loadingMoreGrid) return;
-    if (visibleCount < allVideos.length) {
-      setLoadingMoreGrid(true);
-      setTimeout(() => {
-        setVisibleCount(c => Math.min(c + 20, allVideos.length));
-        setLoadingMoreGrid(false);
-      }, 300);
-    }
-  }, [loadingMoreGrid, visibleCount, allVideos.length]);
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
