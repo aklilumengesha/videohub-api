@@ -55,6 +55,7 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
     if (!token) return;
 
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
     const es = new EventSource(`${API_BASE}/sse/events?token=${encodeURIComponent(token)}`);
 
     es.addEventListener('notification', () => {
@@ -63,15 +64,20 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
 
     es.onerror = () => {
       es.close();
-      const interval = setInterval(() => {
-        notificationsApi.getUnreadCount()
-          .then(data => setUnreadCount(data.count ?? 0))
-          .catch(() => {});
-      }, 30000);
-      return () => clearInterval(interval);
+      // Fall back to polling every 30s when SSE fails
+      if (!pollInterval) {
+        pollInterval = setInterval(() => {
+          notificationsApi.getUnreadCount()
+            .then(data => setUnreadCount(data.count ?? 0))
+            .catch(() => {});
+        }, 30000);
+      }
     };
 
-    return () => { es.close(); };
+    return () => {
+      es.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [isLoggedIn]);
 
   // Load search history from localStorage

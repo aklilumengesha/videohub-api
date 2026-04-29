@@ -413,4 +413,7 @@ export const notificationsApi = {  getAll: (cursor?: string) =>
 
   markAllRead: () =>
     apiFetch('/notifications/read-all', { method: 'PUT' }),
+
+  markRead: (id: string) =>
+    apiFetch(`/notifications/${id}/read`, { method: 'PUT' }),
 };

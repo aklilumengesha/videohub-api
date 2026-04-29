@@ -60,6 +60,14 @@ export class NotificationService {
     return { message: 'All notifications marked as read' };
   }
 
+  async markRead(notificationId: string, userId: string) {
+    await this.prisma.notification.updateMany({
+      where: { id: notificationId, userId },
+      data: { read: true },
+    });
+    return { message: 'Notification marked as read' };
+  }
+
   async getUnreadCount(userId: string) {
     const count = await this.prisma.notification.count({
       where: { userId, read: false },

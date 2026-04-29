@@ -53,6 +53,13 @@ export default function NotificationsPage() {
     finally { setMarking(false); }
   };
 
+  const handleMarkRead = async (id: string) => {
+    try {
+      await notificationsApi.markRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch { /* ignore */ }
+  };
+
   if (authLoading || (!isLoggedIn && !authLoading)) return null;
 
   return (
@@ -101,6 +108,7 @@ export default function NotificationsPage() {
 
               return (
                 <Link key={n.id} href={href}
+                  onClick={() => { if (!n.read) handleMarkRead(n.id); }}
                   className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-colors hover:bg-gray-100 ${
                     !n.read ? 'bg-blue-50' : ''
                   }`}
