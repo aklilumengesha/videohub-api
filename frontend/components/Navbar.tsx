@@ -20,12 +20,18 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [isListening, setIsListening] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userId, setUserId] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const suggestionsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -68,22 +74,134 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
     return () => { es.close(); };
   }, [isLoggedIn]);
 
-  // Close dropdown when clicking outside
+  // Load search history from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const history = localStorage.getItem('searchHistory');
+      if (history) {
+        try {
+          setSearchHistory(JSON.parse(history));
+        } catch { /* ignore */ }
+      }
+    }
+  }, []);
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+  // Generate search suggestions (debounced)
+  useEffect(() => {
+    if (suggestionsTimerRef.current) clearTimeout(suggestionsTimerRef.current);
+    
+    if (searchQuery.trim().length < 2) {
+      setSearchSuggestions([]);
+      return;
     }
+
+    suggestionsTimerRef.current = setTimeout(() => {
+      // Simple suggestion logic - in production, call backend API
+      const query = searchQuery.toLowerCase();
+      const suggestions: string[] = [];
+      
+      // Add matching history items
+      searchHistory.forEach(item => {
+        if (item.toLowerCase().includes(query) && !suggestions.includes(item)) {
+          suggestions.push(item);
+        }
+      });
+      
+      // Add common suggestions
+      const commonSuggestions = [
+        'tutorial', 'gaming', 'music', 'vlog', 'review', 'how to',
+        'react', 'javascript', 'python', 'cooking', 'travel'
+      ];
+      
+      commonSuggestions.forEach(item => {
+        if (item.includes(query) && !suggestions.includes(item) && suggestions.length < 8) {
+          suggestions.push(item);
+        }
+      });
+      
+      setSearchSuggestions(suggestions.slice(0, 8));
+    }, 300);
+
+    return () => {
+      if (suggestionsTimerRef.current) clearTimeout(suggestionsTimerRef.current);
+    };
+  }, [searchQuery, searchHistory]);
+
+  const handleSearch = (e: React.FormEvent, query?: string) => {
+    e.preventDefault();
+    const searchTerm = query || searchQuery.trim();
+    if (searchTerm) {
+      // Save to history
+      const newHistory = [searchTerm, ...searchHistory.filter(h => h !== searchTerm)].slice(0, 10);
+      setSearchHistory(newHistory);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('searchHistory', JSON.stringify(newHistory));
+      }
+      
+      router.push(`/search?q=${encodeURIComponent(searchTerm)}`);
+      setShowSuggestions(false);
+      setSearchQuery('');
+    }
+  };
+
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('searchHistory');
+    }
+  };
+
+  const handleVoiceSearch = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Voice search is not supported in your browser. Please use Chrome, Edge, or Safari.');
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setSearchQuery(transcript);
+      setIsListening(false);
+      // Auto-search after voice input
+      setTimeout(() => {
+        const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+        handleSearch(fakeEvent, transcript);
+      }, 500);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
   };
 
   const handleLogout = async () => {
@@ -152,22 +270,103 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
         </Link>
       </div>
 
-      {/* Center — search bar */}
-      <form onSubmit={handleSearch} className="flex-1 max-w-xl mx-auto flex">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search"
-          className="flex-1 border border-gray-300 rounded-l-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
-        />
-        <button type="submit"
-          className="px-5 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-full hover:bg-gray-200 transition-colors">
-          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </button>
-      </form>
+      {/* Center — search bar with suggestions */}
+      <div className="flex-1 max-w-xl mx-auto relative" ref={searchRef}>
+        <form onSubmit={handleSearch} className="flex items-center gap-2">
+          <div className="flex-1 flex">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              placeholder="Search"
+              className="flex-1 border border-gray-300 rounded-l-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500"
+            />
+            <button type="submit"
+              className="px-5 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-full hover:bg-gray-200 transition-colors">
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Voice search button */}
+          <button
+            type="button"
+            onClick={handleVoiceSearch}
+            disabled={isListening}
+            className={`p-2 rounded-full transition-colors ${
+              isListening 
+                ? 'bg-red-500 text-white animate-pulse' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            }`}
+            title="Voice search"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </button>
+        </form>
+
+        {/* Search suggestions dropdown */}
+        {showSuggestions && (searchSuggestions.length > 0 || searchHistory.length > 0) && (
+          <div className="absolute top-full left-0 right-0 mt-1 rounded-xl shadow-xl border overflow-hidden z-50"
+            style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+            
+            {/* Search history */}
+            {searchHistory.length > 0 && searchQuery.trim().length === 0 && (
+              <div>
+                <div className="flex items-center justify-between px-4 py-2 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recent searches</p>
+                  <button onClick={clearSearchHistory} className="text-xs text-blue-600 hover:text-blue-700">
+                    Clear all
+                  </button>
+                </div>
+                {searchHistory.slice(0, 5).map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => handleSearch(e, item)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors text-left"
+                  >
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Suggestions */}
+            {searchSuggestions.length > 0 && searchQuery.trim().length > 0 && (
+              <div>
+                {searchHistory.length > 0 && searchQuery.trim().length === 0 && (
+                  <div className="border-t" style={{ borderColor: 'var(--border)' }} />
+                )}
+                {searchSuggestions.map((suggestion, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => handleSearch(e, suggestion)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors text-left"
+                  >
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>
+                      {suggestion.substring(0, suggestion.toLowerCase().indexOf(searchQuery.toLowerCase()))}
+                      <strong>{suggestion.substring(
+                        suggestion.toLowerCase().indexOf(searchQuery.toLowerCase()),
+                        suggestion.toLowerCase().indexOf(searchQuery.toLowerCase()) + searchQuery.length
+                      )}</strong>
+                      {suggestion.substring(suggestion.toLowerCase().indexOf(searchQuery.toLowerCase()) + searchQuery.length)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Right — actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
