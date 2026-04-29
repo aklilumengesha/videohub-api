@@ -5,11 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
-  videosApi, likesApi, commentsApi, playlistsApi, adminApi,
+  videosApi, likesApi, commentsApi, playlistsApi, adminApi, usersApi,
   type Video, type Comment, type Playlist, type VideoChapter, type VideoSubtitle,
 } from '@/lib/api';
 import HlsPlayer from '@/components/HlsPlayer';
 import VideoThumbnail from '@/components/VideoThumbnail';
+import CommentThread from '@/components/CommentThread';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -45,12 +46,14 @@ export default function VideoPage() {
   const [related, setRelated] = useState<Video[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
+  const [commentSort, setCommentSort] = useState<'top' | 'newest'>('top');
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
   const [disliked, setDisliked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showDesc, setShowDesc] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
 
@@ -107,7 +110,7 @@ export default function VideoPage() {
 
     Promise.all([
       videosApi.getOne(id),
-      commentsApi.getAll(id),
+      commentsApi.getAll(id, undefined, commentSort),
       videosApi.getRelated(id),
     ]).then(([v, c, r]) => {
       setVideo(v);
@@ -116,6 +119,7 @@ export default function VideoPage() {
       setRelated(r);
       // Load like state for logged-in users (non-blocking)
       if (isLoggedIn) {
+        usersApi.getMe().then((user: any) => setCurrentUserId(user.id)).catch(() => {});
         likesApi.isLiked(id).then((res: { liked: boolean }) => setLiked(res.liked)).catch(() => {});
         likesApi.isDisliked(id).then((res: { disliked: boolean }) => setDisliked(res.disliked)).catch(() => {});
         // Load watch progress to resume where left off
@@ -127,7 +131,7 @@ export default function VideoPage() {
       videosApi.getSubtitles(id).then((s: VideoSubtitle[]) => setSubtitles(s)).catch(() => {});
     }).catch(() => setError('Video not found'))
       .finally(() => setLoading(false));
-  }, [id, isLoggedIn]);
+  }, [id, isLoggedIn, commentSort]);
 
   const handleLike = async () => {
     if (!isLoggedIn) { router.push('/auth/login'); return; }
@@ -164,6 +168,53 @@ export default function VideoPage() {
     try {
       await commentsApi.remove(commentId);
       setComments(prev => prev.filter(c => c.id !== commentId));
+    } catch { /* ignore */ }
+  };
+
+  const handleReplyComment = async (commentId: string, content: string) => {
+    try {
+      const newReply = await commentsApi.reply(commentId, content);
+      // Refresh comments to show the new reply
+      const updated = await commentsApi.getAll(id, undefined, commentSort);
+      setComments(updated);
+    } catch { /* ignore */ }
+  };
+
+  const handleLikeComment = async (commentId: string) => {
+    try {
+      await commentsApi.like(commentId);
+      // Update like count locally
+      setComments(prev => prev.map(c => 
+        c.id === commentId ? { ...c, likeCount: c.likeCount + 1 } : c
+      ));
+    } catch { /* ignore */ }
+  };
+
+  const handleUnlikeComment = async (commentId: string) => {
+    try {
+      await commentsApi.unlike(commentId);
+      // Update like count locally
+      setComments(prev => prev.map(c => 
+        c.id === commentId ? { ...c, likeCount: Math.max(0, c.likeCount - 1) } : c
+      ));
+    } catch { /* ignore */ }
+  };
+
+  const handlePinComment = async (commentId: string) => {
+    try {
+      await commentsApi.pin(commentId);
+      // Refresh comments to show updated pin status
+      const updated = await commentsApi.getAll(id, undefined, commentSort);
+      setComments(updated);
+    } catch { /* ignore */ }
+  };
+
+  const handleHeartComment = async (commentId: string) => {
+    try {
+      await commentsApi.heart(commentId);
+      // Refresh comments to show updated heart status
+      const updated = await commentsApi.getAll(id, undefined, commentSort);
+      setComments(updated);
     } catch { /* ignore */ }
   };
 
@@ -518,11 +569,22 @@ export default function VideoPage() {
 
           {/* Comments */}
           <div className="rounded-xl p-4 space-y-4" style={{ background: 'var(--background)' }}>
-            <h2 className="font-semibold text-gray-900">{video.commentCount} Comments</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900">{video.commentCount} Comments</h2>
+              
+              {/* Sort dropdown */}
+              <div className="relative">
+                <select value={commentSort} onChange={e => setCommentSort(e.target.value as 'top' | 'newest')}
+                  className="text-sm font-medium text-gray-700 bg-transparent border-none cursor-pointer focus:outline-none">
+                  <option value="top">Top comments</option>
+                  <option value="newest">Newest first</option>
+                </select>
+              </div>
+            </div>
 
             {/* Comment input */}
             <form onSubmit={handleComment} className="flex gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                 {isLoggedIn ? '👤' : '?'}
               </div>
               <div className="flex-1">
@@ -547,31 +609,22 @@ export default function VideoPage() {
             </form>
 
             {/* Comment list */}
-            <div className="space-y-4">
+            <div className="space-y-6">
               {comments.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-4">No comments yet. Be the first!</p>
               ) : comments.map(comment => (
-                <div key={comment.id} className="flex gap-3 group">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-400 to-gray-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    {comment.user.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <Link href={`/profile/${comment.user.id}`}
-                        className="text-xs font-semibold text-gray-900 hover:text-blue-600">
-                        {comment.user.name}
-                      </Link>
-                      <span className="text-xs text-gray-400">{timeAgo(comment.createdAt)}</span>
-                    </div>
-                    <p className="text-sm text-gray-700">{comment.content}</p>
-                  </div>
-                  {isLoggedIn && (
-                    <button onClick={() => handleDeleteComment(comment.id)}
-                      className="text-gray-300 hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-opacity self-start mt-1">
-                      ✕
-                    </button>
-                  )}
-                </div>
+                <CommentThread
+                  key={comment.id}
+                  comment={comment}
+                  isVideoOwner={video.user.id === currentUserId}
+                  currentUserId={currentUserId || undefined}
+                  onReply={handleReplyComment}
+                  onDelete={handleDeleteComment}
+                  onLike={handleLikeComment}
+                  onUnlike={handleUnlikeComment}
+                  onPin={handlePinComment}
+                  onHeart={handleHeartComment}
+                />
               ))}
             </div>
           </div>

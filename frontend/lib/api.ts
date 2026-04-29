@@ -81,7 +81,12 @@ export interface Comment {
   id: string;
   content: string;
   createdAt: string;
-  user: { id: string; name: string };
+  likeCount: number;
+  isPinned?: boolean;
+  isHearted?: boolean;
+  user: { id: string; name: string; avatarUrl?: string };
+  _count?: { replies: number };
+  replies?: Comment[];
 }
 
 export interface Notification {
@@ -284,8 +289,8 @@ export const likesApi = {
 // ── Comments API ──────────────────────────────────────────────────────────────
 
 export const commentsApi = {
-  getAll: (videoId: string, cursor?: string) =>
-    apiFetch(`/videos/${videoId}/comments${cursor ? `?cursor=${cursor}` : ''}`),
+  getAll: (videoId: string, cursor?: string, sort?: 'top' | 'newest') =>
+    apiFetch(`/videos/${videoId}/comments${cursor || sort ? `?${new URLSearchParams({ ...(cursor ? { cursor } : {}), ...(sort ? { sort } : {}) }).toString()}` : ''}`),
 
   create: (videoId: string, content: string) =>
     apiFetch(`/videos/${videoId}/comments`, {
@@ -293,8 +298,26 @@ export const commentsApi = {
       body: JSON.stringify({ content }),
     }),
 
+  reply: (commentId: string, content: string) =>
+    apiFetch(`/comments/${commentId}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+
   remove: (commentId: string) =>
     apiFetch(`/comments/${commentId}`, { method: 'DELETE' }),
+
+  like: (commentId: string) =>
+    apiFetch(`/comments/${commentId}/like`, { method: 'POST' }),
+
+  unlike: (commentId: string) =>
+    apiFetch(`/comments/${commentId}/like`, { method: 'DELETE' }),
+
+  pin: (commentId: string) =>
+    apiFetch(`/comments/${commentId}/pin`, { method: 'POST' }),
+
+  heart: (commentId: string) =>
+    apiFetch(`/comments/${commentId}/heart`, { method: 'POST' }),
 };
 
 // ── Feed API ──────────────────────────────────────────────────────────────────

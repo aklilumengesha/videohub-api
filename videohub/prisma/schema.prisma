@@ -121,16 +121,22 @@ model Comment {
   content   String
   userId    String
   videoId   String
+  parentId  String?  // for nested replies
   likeCount Int      @default(0)
+  isPinned  Boolean  @default(false)  // pinned by video owner
+  isHearted Boolean  @default(false)  // hearted by video owner
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  likes CommentLike[]
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video    Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  parent   Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[]     @relation("CommentReplies")
+  likes    CommentLike[]
 
   @@index([videoId])
   @@index([userId])
+  @@index([parentId])
 }
 
 model Follow {

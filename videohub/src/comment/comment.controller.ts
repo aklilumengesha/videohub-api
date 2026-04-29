@@ -29,13 +29,76 @@ export class CommentController {
   @ApiResponse({ status: 404, description: 'Video not found' })
   @ApiQuery({ name: 'cursor', required: false, description: 'ISO date string for pagination' })
   @ApiQuery({ name: 'limit', required: false, description: 'Number of comments to return (default 20)' })
+  @ApiQuery({ name: 'sort', required: false, description: 'Sort by: top or newest (default newest)' })
   @Get('videos/:videoId/comments')
   findAll(
     @Param('videoId') videoId: string,
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
+    @Query('sort') sort?: string,
   ) {
-    return this.commentService.findAll(videoId, cursor, limit ? parseInt(limit) : 20);
+    return this.commentService.findAll(videoId, cursor, limit ? parseInt(limit) : 20, sort as 'top' | 'newest');
+  }
+
+  @ApiOperation({ summary: 'Reply to a comment (requires auth)' })
+  @ApiResponse({ status: 201, description: 'Reply created' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('comments/:commentId/reply')
+  reply(
+    @Param('commentId') commentId: string,
+    @Request() req: { user: { userId: string } },
+    @Body() dto: CreateCommentDto,
+  ) {
+    return this.commentService.reply(commentId, req.user.userId, dto);
+  }
+
+  @ApiOperation({ summary: 'Pin/unpin a comment (video owner only)' })
+  @ApiResponse({ status: 200, description: 'Comment pinned/unpinned' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('comments/:commentId/pin')
+  pin(
+    @Param('commentId') commentId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.commentService.togglePin(commentId, req.user.userId);
+  }
+
+  @ApiOperation({ summary: 'Heart/unheart a comment (video owner only)' })
+  @ApiResponse({ status: 200, description: 'Comment hearted/unhearted' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('comments/:commentId/heart')
+  heart(
+    @Param('commentId') commentId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.commentService.toggleHeart(commentId, req.user.userId);
+  }
+
+  @ApiOperation({ summary: 'Like a comment (requires auth)' })
+  @ApiResponse({ status: 200, description: 'Comment liked' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('comments/:commentId/like')
+  like(
+    @Param('commentId') commentId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.commentService.like(commentId, req.user.userId);
+  }
+
+  @ApiOperation({ summary: 'Unlike a comment (requires auth)' })
+  @ApiResponse({ status: 200, description: 'Comment unliked' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('comments/:commentId/like')
+  unlike(
+    @Param('commentId') commentId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
+    return this.commentService.unlike(commentId, req.user.userId);
   }
 
   @ApiOperation({ summary: 'Delete a comment (owner only)' })
