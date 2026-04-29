@@ -10,7 +10,15 @@ export class UserService {
     return this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl: avatarPath },
-      select: { id: true, name: true, email: true, bio: true, avatarUrl: true, createdAt: true, updatedAt: true },
+      select: { id: true, name: true, email: true, bio: true, avatarUrl: true, bannerUrl: true, createdAt: true, updatedAt: true },
+    });
+  }
+
+  async updateBanner(userId: string, bannerPath: string) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { bannerUrl: bannerPath },
+      select: { id: true, name: true, email: true, bio: true, avatarUrl: true, bannerUrl: true, createdAt: true, updatedAt: true },
     });
   }
 
@@ -40,6 +48,9 @@ export class UserService {
         name: true,
         bio: true,
         avatarUrl: true,
+        bannerUrl: true,
+        isVerified: true,
+        subscriberCount: true,
         createdAt: true,
         _count: { select: { followers: true } },
       },

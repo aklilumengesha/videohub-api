@@ -186,6 +186,12 @@ export const usersApi = {
     return apiFetch('/users/me/avatar', { method: 'POST', body: formData });
   },
 
+  uploadBanner: (file: File) => {
+    const formData = new FormData();
+    formData.append('banner', file);
+    return apiFetch('/users/me/banner', { method: 'POST', body: formData });
+  },
+
   getHistory: (cursor?: string) =>
     apiFetch(`/users/me/history${cursor ? `?cursor=${cursor}` : ''}`),
 

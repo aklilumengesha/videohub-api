@@ -74,6 +74,36 @@ export class UserController {
     return this.userService.updateAvatar(req.user.userId, file.path);
   }
 
+  @ApiOperation({ summary: 'Upload banner image for current user channel' })
+  @ApiResponse({ status: 200, description: 'Returns updated user with bannerUrl' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('banner', {
+    storage: diskStorage({
+      destination: (_req, _file, cb) => {
+        const dir = join('uploads', 'banners');
+        mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+      },
+      filename: (_req, file, cb) => {
+        cb(null, `${Date.now()}${extname(file.originalname)}`);
+      },
+    }),
+  }))
+  @Post('me/banner')
+  uploadBanner(
+    @Request() req: { user: { userId: string } },
+    @UploadedFile(new ParseFilePipe({
+      validators: [
+        new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10MB
+        new FileTypeValidator({ fileType: /image\/(jpeg|png|webp)/ }),
+      ],
+    })) file: Express.Multer.File,
+  ) {
+    return this.userService.updateBanner(req.user.userId, file.path);
+  }
+
   @ApiOperation({ summary: 'Get all videos uploaded by a user' })
   @ApiResponse({ status: 200, description: 'Returns list of user videos' })
   @ApiResponse({ status: 404, description: 'User not found' })

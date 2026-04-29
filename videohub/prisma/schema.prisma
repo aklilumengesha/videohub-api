@@ -15,7 +15,10 @@ model User {
   refreshToken String?
   bio          String?
   avatarUrl    String?  // path to uploaded avatar image
+  bannerUrl    String?  // channel banner image
   isAdmin      Boolean  @default(false)
+  isVerified   Boolean  @default(false)  // verification badge
+  subscriberCount Int   @default(0)      // cached count for performance
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
