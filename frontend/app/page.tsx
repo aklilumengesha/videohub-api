@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { videosApi, feedApi } from '@/lib/api';
-import VideoCard from '@/components/VideoCard';
+import LazyVideoCard from '@/components/LazyVideoCard';
 import VideoShelf from '@/components/VideoShelf';
+import InfiniteScrollSentinel from '@/components/InfiniteScrollSentinel';
+import { VideoGridSkeleton, VideoShelfSkeleton } from '@/components/VideoCardSkeleton';
 import type { Video } from '@/lib/api';
 
 const CATEGORIES = ['All', 'Gaming', 'Music', 'Education', 'Entertainment', 'Sports', 'Technology', 'Travel', 'Food', 'Fashion', 'News'];
@@ -13,6 +15,8 @@ const CATEGORIES = ['All', 'Gaming', 'Music', 'Education', 'Entertainment', 'Spo
 export default function HomePage() {
   const { isLoggedIn, loading } = useAuth();
   const [allVideos, setAllVideos] = useState<Video[]>([]);
+  const [visibleCount, setVisibleCount] = useState(20);
+  const [loadingMoreGrid, setLoadingMoreGrid] = useState(false);
   const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
   const [personalizedVideos, setPersonalizedVideos] = useState<Video[]>([]);
   const [categoryVideos, setCategoryVideos] = useState<Record<string, Video[]>>({});
@@ -25,6 +29,7 @@ export default function HomePage() {
   useEffect(() => {
     setFetching(true);
     setError('');
+    setVisibleCount(20);
 
     const loadData = async () => {
       try {
@@ -75,6 +80,17 @@ export default function HomePage() {
     </div>
   );
 
+  const handleLoadMore = useCallback(() => {
+    if (loadingMoreGrid) return;
+    if (visibleCount < allVideos.length) {
+      setLoadingMoreGrid(true);
+      setTimeout(() => {
+        setVisibleCount(c => Math.min(c + 20, allVideos.length));
+        setLoadingMoreGrid(false);
+      }, 300);
+    }
+  }, [loadingMoreGrid, visibleCount, allVideos.length]);
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
       {/* Sticky category chips bar */}
@@ -119,28 +135,9 @@ export default function HomePage() {
         )}
 
         {fetching ? (
-          <div className="space-y-8">
-            {/* Skeleton for shelves */}
-            {[1, 2, 3].map(i => (
-              <div key={i} className="space-y-4">
-                <div className="h-6 bg-gray-200 rounded w-48 animate-pulse" />
-                <div className="flex gap-4 overflow-hidden">
-                  {Array.from({ length: 6 }).map((_, j) => (
-                    <div key={j} className="flex-shrink-0 w-72 animate-pulse">
-                      <div className="aspect-video rounded-xl bg-gray-200 mb-3" />
-                      <div className="flex gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-3.5 bg-gray-200 rounded w-full" />
-                          <div className="h-3 bg-gray-200 rounded w-3/4" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          activeCategory === 'All' && viewMode === 'shelves'
+            ? <VideoShelfSkeleton rows={3} />
+            : <VideoGridSkeleton count={20} />
         ) : allVideos.length === 0 ? (
           <div className="text-center py-24">
             <div className="text-6xl mb-4">🎬</div>
@@ -201,10 +198,17 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          /* Grid view - traditional layout */
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
-            {allVideos.map(video => <VideoCard key={video.id} video={video} />)}
-          </div>
+          /* Grid view - traditional layout with lazy loading + infinite scroll */
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
+              {allVideos.slice(0, visibleCount).map(video => (
+                <LazyVideoCard key={video.id} video={video} />
+              ))}
+            </div>
+            {visibleCount < allVideos.length && (
+              <InfiniteScrollSentinel onVisible={handleLoadMore} loading={loadingMoreGrid} />
+            )}
+          </>
         )}
       </main>
     </div>

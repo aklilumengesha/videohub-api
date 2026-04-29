@@ -104,6 +104,7 @@ export default function VideoThumbnail({
         fill
         className={className || 'object-cover'}
         unoptimized
+        loading="lazy"
       />
     ) : (
       <Image
@@ -113,6 +114,7 @@ export default function VideoThumbnail({
         height={height || 180}
         className={className || 'object-cover w-full h-full'}
         unoptimized
+        loading="lazy"
       />
     );
   }
