@@ -58,3 +58,18 @@ body {
 }
 .dark input::placeholder,
 .dark textarea::placeholder { color: #6b7280; }
+
+/* ── Scrollbar utilities ──────────────────────────────────────────────────── */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* ── Smooth scrolling ─────────────────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}

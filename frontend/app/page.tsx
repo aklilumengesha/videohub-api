@@ -1,71 +1,73 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { videosApi } from '@/lib/api';
+import { videosApi, feedApi } from '@/lib/api';
 import VideoCard from '@/components/VideoCard';
+import VideoShelf from '@/components/VideoShelf';
 import type { Video } from '@/lib/api';
 
 const CATEGORIES = ['All', 'Gaming', 'Music', 'Education', 'Entertainment', 'Sports', 'Technology', 'Travel', 'Food', 'Fashion', 'News'];
-const PAGE_SIZE = 20;
 
 export default function HomePage() {
   const { isLoggedIn, loading } = useAuth();
-  const [videos, setVideos] = useState<Video[]>([]);
+  const [allVideos, setAllVideos] = useState<Video[]>([]);
+  const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
+  const [personalizedVideos, setPersonalizedVideos] = useState<Video[]>([]);
+  const [categoryVideos, setCategoryVideos] = useState<Record<string, Video[]>>({});
   const [activeCategory, setActiveCategory] = useState('All');
-  const [sort, setSort] = useState<'newest' | 'popular'>('newest');
+  const [viewMode, setViewMode] = useState<'shelves' | 'grid'>('shelves');
   const [fetching, setFetching] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState('');
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const cursorRef = useRef<string | undefined>(undefined);
 
-  // Load first page whenever category/sort changes
+  // Load videos on mount and when category changes
   useEffect(() => {
     setFetching(true);
-    setVideos([]);
-    setHasMore(true);
-    cursorRef.current = undefined;
     setError('');
 
-    videosApi.getAll(
-      activeCategory === 'All' ? undefined : activeCategory,
-      sort,
-    )
-      .then((data: Video[]) => {
-        setVideos(data);
-        if (data.length < PAGE_SIZE) setHasMore(false);
-        if (data.length > 0) cursorRef.current = data[data.length - 1].createdAt;
-      })
-      .catch(() => setError('Failed to load videos'))
-      .finally(() => setFetching(false));
-  }, [activeCategory, sort]);
+    const loadData = async () => {
+      try {
+        // Load all videos
+        const all = await videosApi.getAll(
+          activeCategory === 'All' ? undefined : activeCategory,
+          'newest'
+        );
+        setAllVideos(all);
 
-  // Infinite scroll — load more when sentinel enters viewport
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore || fetching || !cursorRef.current) return;
-    setLoadingMore(true);
-    try {
-      // The backend doesn't support cursor pagination on /videos yet,
-      // so we simulate by slicing — in production you'd pass cursor param
-      // For now just mark no more after first load (all videos returned at once)
-      setHasMore(false);
-    } catch { /* ignore */ }
-    finally { setLoadingMore(false); }
-  }, [loadingMore, hasMore, fetching]);
+        // Load trending (only on "All" category)
+        if (activeCategory === 'All') {
+          const trending = await videosApi.getTrending().catch(() => []);
+          setTrendingVideos(trending.slice(0, 10));
 
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      entries => { if (entries[0].isIntersecting) loadMore(); },
-      { rootMargin: '200px' },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadMore]);
+          // Load personalized feed for logged-in users
+          if (isLoggedIn) {
+            const personalized = await feedApi.getPersonalized().catch(() => []);
+            setPersonalizedVideos(personalized.slice(0, 10));
+          }
+
+          // Load videos by category for shelves
+          const categories = ['Gaming', 'Music', 'Education', 'Entertainment'];
+          const categoryData: Record<string, Video[]> = {};
+          
+          await Promise.all(
+            categories.map(async (cat) => {
+              const videos = await videosApi.getAll(cat, 'popular').catch(() => []);
+              categoryData[cat] = videos.slice(0, 10);
+            })
+          );
+          
+          setCategoryVideos(categoryData);
+        }
+      } catch {
+        setError('Failed to load videos');
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    loadData();
+  }, [activeCategory, isLoggedIn]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -76,12 +78,12 @@ export default function HomePage() {
   return (
     <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
       {/* Sticky category chips bar */}
-      <div className="sticky top-14 z-30 border-b px-4 py-2 flex items-center gap-2"
+      <div className="sticky top-14 z-30 border-b px-4 py-3 flex items-center gap-3"
         style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
           {CATEGORIES.map(cat => (
             <button key={cat} onClick={() => setActiveCategory(cat)}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 activeCategory === cat
                   ? 'bg-gray-900 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -91,17 +93,24 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Sort toggle */}
-        <div className="flex-shrink-0 flex bg-gray-100 rounded-lg p-0.5 ml-2">
-          <button onClick={() => setSort('newest')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${sort === 'newest' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            New
+        {/* View mode toggle */}
+        {activeCategory === 'All' && (
+          <button
+            onClick={() => setViewMode(v => v === 'shelves' ? 'grid' : 'shelves')}
+            className="flex-shrink-0 p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+            title={viewMode === 'shelves' ? 'Switch to grid view' : 'Switch to shelf view'}
+          >
+            {viewMode === 'shelves' ? (
+              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
           </button>
-          <button onClick={() => setSort('popular')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${sort === 'popular' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            Popular
-          </button>
-        </div>
+        )}
       </div>
 
       <main className="max-w-[1800px] mx-auto px-4 py-6">
@@ -110,22 +119,29 @@ export default function HomePage() {
         )}
 
         {fetching ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
-            {Array.from({ length: 15 }).map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="aspect-video rounded-xl bg-gray-200 mb-3" />
-                <div className="flex gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3.5 bg-gray-200 rounded w-full" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4" />
-                    <div className="h-3 bg-gray-200 rounded w-1/2" />
-                  </div>
+          <div className="space-y-8">
+            {/* Skeleton for shelves */}
+            {[1, 2, 3].map(i => (
+              <div key={i} className="space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-48 animate-pulse" />
+                <div className="flex gap-4 overflow-hidden">
+                  {Array.from({ length: 6 }).map((_, j) => (
+                    <div key={j} className="flex-shrink-0 w-72 animate-pulse">
+                      <div className="aspect-video rounded-xl bg-gray-200 mb-3" />
+                      <div className="flex gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3.5 bg-gray-200 rounded w-full" />
+                          <div className="h-3 bg-gray-200 rounded w-3/4" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
           </div>
-        ) : videos.length === 0 ? (
+        ) : allVideos.length === 0 ? (
           <div className="text-center py-24">
             <div className="text-6xl mb-4">🎬</div>
             <h2 className="text-xl font-semibold text-gray-700 mb-2">No videos yet</h2>
@@ -142,19 +158,53 @@ export default function HomePage() {
               </Link>
             )}
           </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
-              {videos.map(video => <VideoCard key={video.id} video={video} />)}
-            </div>
+        ) : activeCategory === 'All' && viewMode === 'shelves' ? (
+          /* Shelf view - YouTube style horizontal sections */
+          <div className="space-y-8">
+            {/* Personalized feed for logged-in users */}
+            {isLoggedIn && personalizedVideos.length > 0 && (
+              <VideoShelf
+                title="Recommended for you"
+                videos={personalizedVideos}
+                icon="✨"
+              />
+            )}
 
-            {/* Infinite scroll sentinel */}
-            <div ref={sentinelRef} className="h-10 mt-4 flex items-center justify-center">
-              {loadingMore && (
-                <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-              )}
-            </div>
-          </>
+            {/* Trending videos */}
+            {trendingVideos.length > 0 && (
+              <VideoShelf
+                title="Trending"
+                videos={trendingVideos}
+                icon="🔥"
+              />
+            )}
+
+            {/* Latest uploads */}
+            {allVideos.length > 0 && (
+              <VideoShelf
+                title="Latest uploads"
+                videos={allVideos.slice(0, 10)}
+                icon="🆕"
+              />
+            )}
+
+            {/* Category shelves */}
+            {Object.entries(categoryVideos).map(([category, videos]) => (
+              videos.length > 0 && (
+                <VideoShelf
+                  key={category}
+                  title={category}
+                  videos={videos}
+                  viewAllLink={`/?category=${category}`}
+                />
+              )
+            ))}
+          </div>
+        ) : (
+          /* Grid view - traditional layout */
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
+            {allVideos.map(video => <VideoCard key={video.id} video={video} />)}
+          </div>
         )}
       </main>
     </div>
