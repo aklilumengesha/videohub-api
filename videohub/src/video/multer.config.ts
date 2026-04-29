@@ -7,9 +7,10 @@ import { Request } from 'express';
 export const multerStorage = diskStorage({
   destination: './uploads',
   filename: (_req: Request, file: Express.Multer.File, cb) => {
-    // Generate unique filename: timestamp + original extension
+    // Sanitize filename — strip any path components to prevent traversal attacks
+    const ext = extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
     const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${uniqueName}${extname(file.originalname)}`);
+    cb(null, `${uniqueName}${ext}`);
   },
 });
 

@@ -47,6 +47,7 @@ export default function SearchPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [error, setError] = useState('');
   const [uploadDate, setUploadDate] = useState('');
   const [sortBy, setSortBy] = useState('relevance');
   const [showFilters, setShowFilters] = useState(false);
@@ -54,15 +55,17 @@ export default function SearchPage() {
 
   const doSearch = (q: string, date: string, sort: string) => {
     if (q.trim().length < 2) {
-      setVideos([]); setUsers([]); setSearched(false); return;
+      setVideos([]); setUsers([]); setSearched(false); setError(''); return;
     }
     setLoading(true);
+    setError('');
     Promise.all([
       searchApi.videos(q.trim(), undefined, date || undefined, sort !== 'relevance' ? sort : undefined),
       searchApi.users(q.trim()),
     ]).then(([v, u]) => {
       setVideos(v); setUsers(u); setSearched(true);
     }).catch(() => {
+      setError('Search failed. Please try again.');
       setVideos([]); setUsers([]);
     }).finally(() => setLoading(false));
   };
@@ -170,6 +173,12 @@ export default function SearchPage() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
+            {error}
           </div>
         )}
 

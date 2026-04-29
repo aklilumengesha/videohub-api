@@ -51,6 +51,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [clearError, setClearError] = useState('');
 
   useEffect(() => {
     if (!authLoading && !isLoggedIn) router.push('/auth/login');
@@ -81,12 +82,14 @@ export default function HistoryPage() {
   const handleClear = async () => {
     if (!confirm('Clear all watch history?')) return;
     setClearing(true);
+    setClearError('');
     try {
       await usersApi.clearHistory();
       setItems([]);
       setNextCursor(null);
-    } catch { /* ignore */ }
-    finally { setClearing(false); }
+    } catch {
+      setClearError('Failed to clear history. Please try again.');
+    } finally { setClearing(false); }
   };
 
   if (authLoading || (!isLoggedIn && !authLoading)) return null;
@@ -103,6 +106,12 @@ export default function HistoryPage() {
             </button>
           )}
         </div>
+
+        {clearError && (
+          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 text-sm">
+            {clearError}
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-4">
