@@ -153,7 +153,8 @@ export class VideoService implements OnModuleInit {
         filePath: file?.path ?? null,
         userId,
         status: 'PROCESSING',
-        // category and tags will be enabled after npx prisma db push + prisma generate
+        category: dto.category,
+        tags: dto.tags ?? [],
       },
     });
 

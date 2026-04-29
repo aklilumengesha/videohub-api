@@ -3,43 +3,29 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { analyticsApi } from '@/lib/api';
+import { analyticsApi, usersApi } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-interface Overview {
-  totalVideos: number;
-  totalViews: number;
-  totalLikes: number;
-  totalComments: number;
-  subscribers: number;
+function formatViews(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return `${n}`;
 }
 
-interface VideoStat {
-  id: string;
-  title: string;
-  thumbnailUrl?: string;
-  viewCount: number;
-  likeCount: number;
-  commentCount: number;
-  status: string;
-  createdAt: string;
-}
-
-interface DayView {
-  date: string;
-  views: number;
+function formatDuration(s?: number) {
+  if (!s) return '0:00';
+  const m = Math.floor(s / 60), sec = s % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
 }
 
 export default function AnalyticsPage() {
   const router = useRouter();
   const { isLoggedIn, loading: authLoading } = useAuth();
-
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [videos, setVideos] = useState<VideoStat[]>([]);
-  const [dailyViews, setDailyViews] = useState<DayView[]>([]);
+  const [overview, setOverview] = useState<any>(null);
+  const [videoStats, setVideoStats] = useState<any[]>([]);
+  const [dailyViews, setDailyViews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
 
@@ -49,167 +35,167 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (!isLoggedIn) return;
+    setLoading(true);
     Promise.all([
       analyticsApi.getOverview(),
       analyticsApi.getVideoStats(),
       analyticsApi.getDailyViews(days),
-    ])
-      .then(([o, v, d]) => { setOverview(o); setVideos(v); setDailyViews(d); })
-      .catch(() => {})
+    ]).then(([ov, vs, dv]) => {
+      setOverview(ov);
+      setVideoStats(vs || []);
+      setDailyViews(dv || []);
+    }).catch(() => {})
       .finally(() => setLoading(false));
   }, [isLoggedIn, days]);
 
-  if (authLoading || (!isLoggedIn && !authLoading)) return null;
+  if (authLoading || !isLoggedIn) return null;
 
-  const maxViews = Math.max(...dailyViews.map(d => d.views), 1);
+  const maxViews = dailyViews.length > 0 ? Math.max(...dailyViews.map((d: any) => d.views || 0), 1) : 1;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
-          <Link href="/channel" className="text-sm text-blue-600 hover:underline">← My Channel</Link>
+    <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
+      <div className="max-w-5xl mx-auto px-4 py-6">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
+            <p className="text-sm text-gray-500 mt-1">Track your channel performance</p>
+          </div>
+          <Link href="/studio" className="text-sm text-blue-600 hover:underline">← Creator Studio</Link>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-gray-400">Loading...</div>
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => <div key={i} className="h-32 rounded-xl bg-gray-200 animate-pulse" />)}
+          </div>
         ) : (
-          <>
+          <div className="space-y-6">
+
             {/* Overview cards */}
-            {overview && (
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-                {[
-                  { label: 'Videos',      value: overview.totalVideos,   icon: '🎬' },
-                  { label: 'Total Views', value: overview.totalViews.toLocaleString(),   icon: '👁' },
-                  { label: 'Likes',       value: overview.totalLikes.toLocaleString(),   icon: '❤️' },
-                  { label: 'Comments',    value: overview.totalComments.toLocaleString(), icon: '💬' },
-                  { label: 'Subscribers', value: overview.subscribers.toLocaleString(),  icon: '👥' },
-                ].map(s => (
-                  <div key={s.label} className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-                    <div className="text-2xl mb-1">{s.icon}</div>
-                    <div className="text-xl font-bold text-gray-900">{s.value}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { label: 'Total Views', value: formatViews(overview?.totalViews || 0), icon: '👁', color: 'blue' },
+                { label: 'Total Likes', value: formatViews(overview?.totalLikes || 0), icon: '👍', color: 'green' },
+                { label: 'Total Comments', value: formatViews(overview?.totalComments || 0), icon: '💬', color: 'purple' },
+                { label: 'Total Videos', value: overview?.totalVideos || 0, icon: '🎬', color: 'orange' },
+              ].map(card => (
+                <div key={card.label} className="rounded-xl p-5" style={{ background: 'var(--background)' }}>
+                  <div className="text-2xl mb-2">{card.icon}</div>
+                  <p className="text-2xl font-bold text-gray-900">{card.value}</p>
+                  <p className="text-xs text-gray-500 mt-1">{card.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Daily views chart */}
+            {dailyViews.length > 0 && (
+              <div className="rounded-xl p-6" style={{ background: 'var(--background)' }}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold text-gray-900">Views over time</h2>
+                  <div className="flex gap-2">
+                    {[7, 30, 90].map(d => (
+                      <button key={d} onClick={() => setDays(d)}
+                        className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                          days === d ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}>
+                        {d}d
+                      </button>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Views chart */}
-            <div className="bg-white rounded-xl p-5 border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-gray-900">Views over time</h2>
-                <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-                  {[7, 30, 90].map(d => (
-                    <button key={d} onClick={() => setDays(d)}
-                      className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                        days === d ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                      }`}>
-                      {d}d
-                    </button>
-                  ))}
                 </div>
-              </div>
 
-              {dailyViews.every(d => d.views === 0) ? (
-                <div className="h-32 flex items-center justify-center text-gray-400 text-sm">
-                  No view data yet — views will appear here once your videos are watched
-                </div>
-              ) : (
-                <div className="flex items-end gap-0.5 h-32">
-                  {dailyViews.map(day => {
-                    const height = maxViews > 0 ? Math.max(2, Math.round((day.views / maxViews) * 100)) : 2;
+                {/* Bar chart */}
+                <div className="flex items-end gap-1 h-32">
+                  {dailyViews.slice(-days).map((day: any, i: number) => {
+                    const height = maxViews > 0 ? Math.max((day.views / maxViews) * 100, 2) : 2;
                     return (
-                      <div key={day.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                      <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                          {day.views} views
+                        </div>
                         <div
                           className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-default"
                           style={{ height: `${height}%` }}
                         />
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                          {day.date}: {day.views} views
-                        </div>
                       </div>
                     );
                   })}
                 </div>
-              )}
-
-              {/* X-axis labels — show first, middle, last */}
-              {dailyViews.length > 0 && (
-                <div className="flex justify-between mt-2 text-xs text-gray-400">
-                  <span>{dailyViews[0]?.date}</span>
-                  <span>{dailyViews[Math.floor(dailyViews.length / 2)]?.date}</span>
-                  <span>{dailyViews[dailyViews.length - 1]?.date}</span>
+                <div className="flex justify-between text-xs text-gray-400 mt-2">
+                  <span>{dailyViews[0]?.date ? new Date(dailyViews[0].date).toLocaleDateString() : ''}</span>
+                  <span>{dailyViews[dailyViews.length - 1]?.date ? new Date(dailyViews[dailyViews.length - 1].date).toLocaleDateString() : ''}</span>
                 </div>
-              )}
-            </div>
-
-            {/* Video table */}
-            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-900">Video Performance</h2>
               </div>
+            )}
 
-              {videos.length === 0 ? (
-                <div className="p-8 text-center text-gray-400">
-                  <div className="text-3xl mb-2">🎬</div>
-                  <p>No videos yet</p>
+            {/* Top videos table */}
+            {videoStats.length > 0 && (
+              <div className="rounded-xl overflow-hidden" style={{ background: 'var(--background)' }}>
+                <div className="px-6 py-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                  <h2 className="font-bold text-gray-900">Top Videos</h2>
                 </div>
-              ) : (
-                <div className="divide-y divide-gray-50">
-                  {videos.map(video => (
-                    <div key={video.id} className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition-colors">
-                      {/* Thumbnail */}
-                      <Link href={`/videos/${video.id}`} className="relative w-20 h-12 flex-shrink-0 rounded overflow-hidden bg-gray-900">
-                        {video.thumbnailUrl ? (
-                          <Image src={`${API_URL}/${video.thumbnailUrl}`} alt={video.title} fill className="object-cover" unoptimized />
-                        ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 flex items-center justify-center">
-                            <span className="text-lg opacity-60">🎥</span>
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Video</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Views</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Likes</th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Comments</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {videoStats.slice(0, 10).map((v: any) => (
+                      <tr key={v.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-3">
+                            {v.thumbnailUrl && (
+                              <img src={`${API_URL}/${v.thumbnailUrl}`} alt={v.title}
+                                className="w-16 h-10 rounded object-cover flex-shrink-0" />
+                            )}
+                            <Link href={`/videos/${v.id}`}
+                              className="text-sm font-medium text-gray-900 hover:text-blue-600 line-clamp-1">
+                              {v.title}
+                            </Link>
                           </div>
-                        )}
-                      </Link>
+                        </td>
+                        <td className="px-6 py-3 text-right text-sm text-gray-700">{formatViews(v.viewCount)}</td>
+                        <td className="px-6 py-3 text-right text-sm text-gray-700">{v.likeCount}</td>
+                        <td className="px-6 py-3 text-right text-sm text-gray-700">{v.commentCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-                      {/* Title */}
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/videos/${video.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600 truncate block">
-                          {video.title}
-                        </Link>
-                        <p className="text-xs text-gray-400">{new Date(video.createdAt).toLocaleDateString()}</p>
+            {/* Engagement rate */}
+            {overview && overview.totalViews > 0 && (
+              <div className="rounded-xl p-6" style={{ background: 'var(--background)' }}>
+                <h2 className="font-bold text-gray-900 mb-4">Engagement Rate</h2>
+                <div className="space-y-4">
+                  {[
+                    { label: 'Like rate', value: (overview.totalLikes / overview.totalViews) * 100, color: 'bg-green-500' },
+                    { label: 'Comment rate', value: (overview.totalComments / overview.totalViews) * 100, color: 'bg-blue-500' },
+                  ].map(metric => (
+                    <div key={metric.label}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-600">{metric.label}</span>
+                        <span className="font-semibold text-gray-900">{metric.value.toFixed(2)}%</span>
                       </div>
-
-                      {/* Stats */}
-                      <div className="hidden sm:flex items-center gap-6 text-sm text-gray-600 flex-shrink-0">
-                        <div className="text-center">
-                          <div className="font-semibold">{video.viewCount.toLocaleString()}</div>
-                          <div className="text-xs text-gray-400">Views</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-semibold">{video.likeCount.toLocaleString()}</div>
-                          <div className="text-xs text-gray-400">Likes</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-semibold">{video.commentCount.toLocaleString()}</div>
-                          <div className="text-xs text-gray-400">Comments</div>
-                        </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className={`${metric.color} h-2 rounded-full transition-all`}
+                          style={{ width: `${Math.min(metric.value * 10, 100)}%` }} />
                       </div>
-
-                      {/* Status badge */}
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${
-                        video.status === 'READY' ? 'bg-green-100 text-green-700' :
-                        video.status === 'PROCESSING' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {video.status}
-                      </span>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          </>
+              </div>
+            )}
+
+          </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

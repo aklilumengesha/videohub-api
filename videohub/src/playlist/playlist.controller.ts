@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PlaylistService } from './playlist.service';
 import { CreatePlaylistDto } from './dto/create-playlist.dto';
@@ -77,5 +77,18 @@ export class PlaylistController {
     @Request() req: { user: { userId: string } },
   ) {
     return this.playlistService.delete(id, req.user.userId);
+  }
+
+  @ApiOperation({ summary: 'Update playlist title/description/visibility' })
+  @ApiResponse({ status: 200, description: 'Playlist updated' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Put(':id')
+  update(
+    @Param('id') id: string,
+    @Request() req: { user: { userId: string } },
+    @Body() dto: { title?: string; description?: string; isPublic?: boolean },
+  ) {
+    return this.playlistService.update(id, req.user.userId, dto);
   }
 }

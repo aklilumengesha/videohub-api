@@ -28,7 +28,6 @@ export default function StudioPage() {
   const [analytics, setAnalytics] = useState<any>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<'delete' | 'visibility' | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
@@ -77,7 +76,6 @@ export default function StudioPage() {
     
     setVideos(prev => prev.filter(v => !selectedVideos.has(v.id)));
     setSelectedVideos(new Set());
-    setBulkAction(null);
   };
 
   if (loading) return (

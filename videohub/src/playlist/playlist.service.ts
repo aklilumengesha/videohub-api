@@ -114,4 +114,20 @@ export class PlaylistService {
     await this.prisma.playlist.delete({ where: { id: playlistId } });
     return { message: 'Playlist deleted' };
   }
+
+  async update(playlistId: string, userId: string, dto: { title?: string; description?: string; isPublic?: boolean }) {
+    const playlist = await this.prisma.playlist.findUnique({ where: { id: playlistId } });
+    if (!playlist) throw new NotFoundException('Playlist not found');
+    if (playlist.userId !== userId) throw new ForbiddenException('Not your playlist');
+
+    return this.prisma.playlist.update({
+      where: { id: playlistId },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title } : {}),
+        ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.isPublic !== undefined ? { isPublic: dto.isPublic } : {}),
+      },
+      select: { id: true, title: true, description: true, isPublic: true, createdAt: true },
+    });
+  }
 }

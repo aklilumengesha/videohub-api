@@ -387,6 +387,9 @@ export const playlistsApi = {
   delete: (id: string) =>
     apiFetch(`/playlists/${id}`, { method: 'DELETE' }),
 
+  update: (id: string, data: { title?: string; description?: string; isPublic?: boolean }) =>
+    apiFetch(`/playlists/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
   // Get or create the "Watch Later" playlist, then add the video
   saveToWatchLater: async (videoId: string) => {
     const playlists: Playlist[] = await apiFetch('/playlists/me');
