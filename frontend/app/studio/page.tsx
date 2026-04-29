@@ -29,6 +29,10 @@ export default function StudioPage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [editingVideo, setEditingVideo] = useState<Video | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -76,6 +80,24 @@ export default function StudioPage() {
     
     setVideos(prev => prev.filter(v => !selectedVideos.has(v.id)));
     setSelectedVideos(new Set());
+  };
+
+  const openEdit = (video: Video) => {
+    setEditingVideo(video);
+    setEditTitle(video.title);
+    setEditDesc(video.description || '');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingVideo || !editTitle.trim()) return;
+    setSaving(true);
+    try {
+      const updated = await videosApi.update(editingVideo.id, { title: editTitle.trim(), description: editDesc.trim() });
+      setVideos(prev => prev.map(v => v.id === editingVideo.id ? { ...v, ...updated } : v));
+      setEditingVideo(null);
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
   };
 
   if (loading) return (
@@ -329,6 +351,10 @@ export default function StudioPage() {
                             className="text-blue-600 hover:text-blue-700 text-sm font-medium">
                             View
                           </Link>
+                          <button onClick={() => openEdit(video)}
+                            className="text-gray-600 hover:text-gray-900 text-sm font-medium">
+                            Edit
+                          </button>
                           <button onClick={async () => {
                             if (confirm('Delete this video?')) {
                               await videosApi.remove(video.id);
@@ -413,5 +439,49 @@ export default function StudioPage() {
         )}
       </div>
     </div>
+
+    {/* Edit Video Modal */}
+    {editingVideo && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+        onClick={() => setEditingVideo(null)}>
+        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6"
+          style={{ background: 'var(--background)' }}
+          onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Edit Video</h3>
+            <button onClick={() => setEditingVideo(null)}
+              className="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)}
+                required maxLength={100}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)}
+                rows={4} maxLength={500}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button type="button" onClick={() => setEditingVideo(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={saving || !editTitle.trim()}
+                className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
   );
 }

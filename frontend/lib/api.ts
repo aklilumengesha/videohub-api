@@ -56,6 +56,8 @@ export interface User {
   name: string;
   bio?: string;
   avatarUrl?: string;
+  bannerUrl?: string;
+  isVerified?: boolean;
   subscriberCount?: number;
   createdAt: string;
 }

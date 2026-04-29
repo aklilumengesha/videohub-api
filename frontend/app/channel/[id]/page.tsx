@@ -97,7 +97,17 @@ export default function ChannelPage() {
 
           {/* Channel Info */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">{channel.name}</h1>
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{channel.name}</h1>
+              {channel.isVerified && (
+                <span title="Verified channel"
+                  className="inline-flex items-center justify-center w-6 h-6 bg-blue-600 rounded-full flex-shrink-0">
+                  <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                  </svg>
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 mb-2">
               <span>{formatCount(channel.subscriberCount || 0)} subscribers</span>
               <span>•</span>
