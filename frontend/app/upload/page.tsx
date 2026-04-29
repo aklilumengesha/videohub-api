@@ -24,6 +24,8 @@ export default function UploadPage() {
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [videoId, setVideoId] = useState<string | null>(null);
@@ -61,6 +63,36 @@ export default function UploadPage() {
       if (!selected.type.startsWith('video/')) { setError('Please select a video file'); return; }
       setFile(selected);
       setError('');
+      generateThumbnailPreview(selected);
+    }
+  };
+
+  const generateThumbnailPreview = (videoFile: File) => {
+    const url = URL.createObjectURL(videoFile);
+    const video = document.createElement('video');
+    video.src = url;
+    video.currentTime = 1;
+    video.muted = true;
+    video.onloadeddata = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 180;
+      canvas.getContext('2d')?.drawImage(video, 0, 0, 320, 180);
+      setThumbnailPreview(canvas.toDataURL('image/jpeg', 0.8));
+      URL.revokeObjectURL(url);
+    };
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = e.dataTransfer.files[0];
+    if (dropped) {
+      if (!dropped.type.startsWith('video/')) { setError('Please drop a video file'); return; }
+      setFile(dropped);
+      setError('');
+      generateThumbnailPreview(dropped);
+      if (!title) setTitle(dropped.name.replace(/\.[^/.]+$/, ''));
     }
   };
 
@@ -179,19 +211,37 @@ export default function UploadPage() {
           {/* File picker */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Video File *</label>
-            <div onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDrop={handleDrop}
+              onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                isDragging
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
+              }`}>
               {file ? (
-                <div>
-                  <div className="text-2xl mb-1">🎬</div>
-                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                  <p className="text-xs text-gray-500 mt-1">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+                <div className="flex items-center gap-4">
+                  {thumbnailPreview && (
+                    <img src={thumbnailPreview} alt="Preview" className="w-24 h-14 rounded-lg object-cover flex-shrink-0" />
+                  )}
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+                    <button type="button" onClick={e => { e.stopPropagation(); setFile(null); setThumbnailPreview(null); }}
+                      className="text-xs text-red-500 hover:text-red-700 mt-1">
+                      Remove
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div>
-                  <div className="text-3xl mb-2">📁</div>
-                  <p className="text-sm text-gray-600">Click to select a video file</p>
-                  <p className="text-xs text-gray-400 mt-1">MP4, MOV, AVI up to 100MB</p>
+                  <div className="text-4xl mb-3">🎬</div>
+                  <p className="text-sm font-medium text-gray-700">
+                    {isDragging ? 'Drop your video here' : 'Drag & drop or click to select'}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">MP4, MOV, AVI, WebM up to 100MB</p>
                 </div>
               )}
             </div>

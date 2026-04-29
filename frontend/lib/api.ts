@@ -386,6 +386,19 @@ export const playlistsApi = {
 
   delete: (id: string) =>
     apiFetch(`/playlists/${id}`, { method: 'DELETE' }),
+
+  // Get or create the "Watch Later" playlist, then add the video
+  saveToWatchLater: async (videoId: string) => {
+    const playlists: Playlist[] = await apiFetch('/playlists/me');
+    let watchLater = playlists.find((p: Playlist) => p.title === 'Watch Later');
+    if (!watchLater) {
+      watchLater = await apiFetch('/playlists', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'Watch Later', isPublic: false }),
+      });
+    }
+    return apiFetch(`/playlists/${watchLater!.id}/videos/${videoId}`, { method: 'POST' });
+  },
 };
 
 // ── Notifications API ─────────────────────────────────────────────────────────

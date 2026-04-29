@@ -2,7 +2,9 @@
 
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { type Video } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { playlistsApi, type Video } from '@/lib/api';
 import VideoThumbnail from './VideoThumbnail';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -43,8 +45,26 @@ interface VideoCardProps {
 export default function VideoCard({ video, showChannel = true }: VideoCardProps) {
   const duration = formatDuration(video.duration);
   const [showPreview, setShowPreview] = useState(false);
+  const [watchLaterSaved, setWatchLaterSaved] = useState(false);
+  const [savingWL, setSavingWL] = useState(false);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { isLoggedIn } = useAuth();
+  const router = useRouter();
+
+  const handleWatchLater = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isLoggedIn) { router.push('/auth/login'); return; }
+    if (savingWL || watchLaterSaved) return;
+    setSavingWL(true);
+    try {
+      await playlistsApi.saveToWatchLater(video.id);
+      setWatchLaterSaved(true);
+      setTimeout(() => setWatchLaterSaved(false), 2000);
+    } catch { /* ignore */ }
+    finally { setSavingWL(false); }
+  };
 
   // Video source for preview — prefer filePath (direct), skip HLS (too slow to start)
   const previewSrc = video.filePath ? `${API_URL}/${video.filePath}` : null;
@@ -109,6 +129,27 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
             {duration}
           </span>
         )}
+
+        {/* Watch Later button — appears on hover */}
+        <button
+          onClick={handleWatchLater}
+          title="Save to Watch Later"
+          className={`absolute top-2 right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
+            watchLaterSaved
+              ? 'bg-green-600 text-white opacity-100'
+              : 'bg-black/70 text-white opacity-0 group-hover:opacity-100 hover:bg-black'
+          } ${savingWL ? 'cursor-wait' : ''}`}
+        >
+          {watchLaterSaved ? (
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          )}
+        </button>
 
         {/* Processing overlay */}
         {video.status === 'PROCESSING' && (
