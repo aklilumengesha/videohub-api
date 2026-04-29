@@ -12,6 +12,7 @@ import HlsPlayer from '@/components/HlsPlayer';
 import VideoThumbnail from '@/components/VideoThumbnail';
 import CommentThread from '@/components/CommentThread';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useSwipe } from '@/hooks/useSwipe';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -86,6 +87,14 @@ export default function VideoPage() {
   // Miniplayer — shown when main player scrolls out of view
   const [showMiniplayer, setShowMiniplayer] = useState(false);
   const playerContainerRef = useRef<HTMLDivElement>(null);
+
+  // Swipe left on player to go to next related video (mobile)
+  useSwipe(playerContainerRef, {
+    onSwipeLeft: () => {
+      if (related.length > 0) router.push(`/videos/${related[0].id}`);
+    },
+    threshold: 80,
+  });
 
   const handleShare = () => {
     setShowShareModal(true);

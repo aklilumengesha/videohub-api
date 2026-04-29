@@ -73,3 +73,37 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* ── PWA / Mobile safe area ───────────────────────────────────────────────── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+/* ── Touch-friendly tap targets ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  button, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Larger tap targets on mobile */
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Full-width video on mobile */
+  .aspect-video {
+    border-radius: 0 !important;
+  }
+}
+
+/* ── Swipe hint animation ─────────────────────────────────────────────────── */
+@keyframes swipe-hint {
+  0%   { transform: translateX(0); opacity: 1; }
+  50%  { transform: translateX(-12px); opacity: 0.6; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+.swipe-hint {
+  animation: swipe-hint 1.5s ease-in-out 1;
+}
