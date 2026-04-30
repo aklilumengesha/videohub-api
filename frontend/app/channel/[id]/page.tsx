@@ -30,11 +30,13 @@ export default function ChannelPage() {
     Promise.all([
       usersApi.getProfile(id),
       usersApi.getUserVideos(id),
-    ]).then(([profile, vids]) => {
+      playlistsApi.getUserPlaylists(id),
+    ]).then(([profile, vids, pls]) => {
       setChannel(profile);
       setVideos(vids);
+      setPlaylists(pls);
       if (isLoggedIn) {
-        usersApi.isFollowing(id).then(res => setIsSubscribed(res.following)).catch(() => {});
+        usersApi.isFollowing(id).then((res: any) => setIsSubscribed(res.isFollowing ?? res.following ?? false)).catch(() => {});
       }
     }).catch(() => router.push('/'))
       .finally(() => setLoading(false));
@@ -197,10 +199,28 @@ export default function ChannelPage() {
           )}
 
           {activeTab === 'playlists' && (
-            <div className="text-center py-16 text-gray-400">
-              <div className="text-4xl mb-2">📋</div>
-              <p>No public playlists</p>
-            </div>
+            playlists.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <div className="text-4xl mb-2">📋</div>
+                <p>No public playlists</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {playlists.map(pl => (
+                  <Link key={pl.id} href={`/playlists/${pl.id}`}
+                    className="flex items-center gap-4 rounded-xl px-4 py-3 border transition-colors hover:bg-gray-100"
+                    style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl flex-shrink-0">
+                      📋
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{pl.title}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">{pl._count?.videos ?? 0} videos</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
           )}
 
           {activeTab === 'about' && (

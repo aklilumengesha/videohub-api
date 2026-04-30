@@ -380,6 +380,8 @@ export const playlistsApi = {
 
   getMine: () => apiFetch('/playlists/me'),
 
+  getUserPlaylists: (userId: string) => apiFetch(`/playlists/user/${userId}`),
+
   getOne: (id: string) => apiFetch(`/playlists/${id}`),
 
   addVideo: (playlistId: string, videoId: string) =>

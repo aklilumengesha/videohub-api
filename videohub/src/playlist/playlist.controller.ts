@@ -30,6 +30,13 @@ export class PlaylistController {
     return this.playlistService.getMyPlaylists(req.user.userId);
   }
 
+  @ApiOperation({ summary: 'Get public playlists for a user' })
+  @ApiResponse({ status: 200, description: 'Returns public playlists' })
+  @Get('user/:userId')
+  getUserPlaylists(@Param('userId') userId: string) {
+    return this.playlistService.getUserPublicPlaylists(userId);
+  }
+
   @ApiOperation({ summary: 'Get a playlist by ID (public or owned)' })
   @ApiResponse({ status: 200, description: 'Returns playlist with videos' })
   @ApiResponse({ status: 404, description: 'Playlist not found' })

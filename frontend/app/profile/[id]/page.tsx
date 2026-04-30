@@ -27,6 +27,7 @@ export default function ProfilePage() {
   const [videos, setVideos] = useState<Video[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [following, setFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,34 +37,32 @@ export default function ProfilePage() {
     Promise.all([
       usersApi.getProfile(id),
       usersApi.getUserVideos(id),
-    ]).then(([p, v]) => {
+      playlistsApi.getUserPlaylists(id),
+    ]).then(([p, v, pl]) => {
       setProfile(p);
       setVideos(v);
+      setPlaylists(pl);
+      setFollowerCount(p._count?.followers ?? p.subscriberCount ?? 0);
       if (isLoggedIn) {
         usersApi.isFollowing(id)
-          .then((r: { isFollowing: boolean }) => setFollowing(r.isFollowing))
+          .then((r: any) => setFollowing(r.isFollowing ?? r.following ?? false))
           .catch(() => {});
       }
     }).catch(() => setError('User not found'))
       .finally(() => setLoading(false));
   }, [id, isLoggedIn]);
 
-  // Load playlists when Playlists tab is first opened
-  useEffect(() => {
-    if (activeTab === 'playlists' && playlists.length === 0) {
-      // Fetch public playlists for this user via the playlists endpoint
-      // We use getOne with the user's profile id — but we need a user playlists endpoint
-      // For now fetch all playlists and filter by userId
-      playlistsApi.getMine().catch(() => []);
-    }
-  }, [activeTab, playlists.length]);
-
   const handleFollow = async () => {
     if (!isLoggedIn) { router.push('/auth/login'); return; }
     setFollowLoading(true);
     try {
-      if (following) { await usersApi.unfollow(id); }
-      else { await usersApi.follow(id); }
+      if (following) {
+        await usersApi.unfollow(id);
+        setFollowerCount(c => Math.max(0, c - 1));
+      } else {
+        await usersApi.follow(id);
+        setFollowerCount(c => c + 1);
+      }
       setFollowing(f => !f);
     } catch { /* ignore */ }
     finally { setFollowLoading(false); }
@@ -113,10 +112,7 @@ export default function ProfilePage() {
           <div className="flex-1 min-w-0 pb-1">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{profile.name}</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              {profile.subscriberCount !== undefined
-                ? `${formatSubscribers(profile.subscriberCount)} subscribers · `
-                : ''}
-              {videos.length} video{videos.length !== 1 ? 's' : ''}
+              {formatSubscribers(followerCount)} subscriber{followerCount !== 1 ? 's' : ''} · {videos.length} video{videos.length !== 1 ? 's' : ''}
             </p>
           </div>
 
@@ -159,11 +155,29 @@ export default function ProfilePage() {
           )}
 
           {activeTab === 'playlists' && (
-            <div className="text-center py-20 text-gray-400">
-              <div className="text-5xl mb-3">📋</div>
-              <p className="text-lg font-medium text-gray-600 mb-1">No public playlists</p>
-              <p className="text-sm">This channel hasn&apos;t created any public playlists</p>
-            </div>
+            playlists.length === 0 ? (
+              <div className="text-center py-20 text-gray-400">
+                <div className="text-5xl mb-3">📋</div>
+                <p className="text-lg font-medium text-gray-600 mb-1">No public playlists</p>
+                <p className="text-sm">This channel hasn&apos;t created any public playlists</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {playlists.map(pl => (
+                  <Link key={pl.id} href={`/playlists/${pl.id}`}
+                    className="flex items-center gap-4 rounded-xl px-4 py-3 border transition-colors hover:bg-gray-100"
+                    style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl flex-shrink-0">
+                      📋
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 truncate">{pl.title}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">{pl._count?.videos ?? 0} videos</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )
           )}
 
           {activeTab === 'about' && (

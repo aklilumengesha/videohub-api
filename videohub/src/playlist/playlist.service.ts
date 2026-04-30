@@ -43,6 +43,21 @@ export class PlaylistService {
     });
   }
 
+  async getUserPublicPlaylists(userId: string) {
+    return this.prisma.playlist.findMany({
+      where: { userId, isPublic: true },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        isPublic: true,
+        createdAt: true,
+        _count: { select: { videos: true } },
+      },
+    });
+  }
+
   async getOne(id: string, requesterId?: string) {
     const playlist = await this.prisma.playlist.findUnique({
       where: { id },
