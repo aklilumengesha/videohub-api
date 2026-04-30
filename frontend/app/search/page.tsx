@@ -251,7 +251,22 @@ export default function SearchPage() {
                           )}
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 text-sm">{user.name}</h3>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-semibold text-gray-900 text-sm">{user.name}</h3>
+                            {(user as any).isVerified && (
+                              <span title="Verified"
+                                className="inline-flex items-center justify-center w-4 h-4 bg-blue-600 rounded-full flex-shrink-0">
+                                <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+                                </svg>
+                              </span>
+                            )}
+                          </div>
+                          {(user as any).subscriberCount > 0 && (
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {formatViews((user as any).subscriberCount)} subscribers
+                            </p>
+                          )}
                           {user.bio && <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{user.bio}</p>}
                         </div>
                       </Link>

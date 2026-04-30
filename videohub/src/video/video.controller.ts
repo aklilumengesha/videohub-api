@@ -31,19 +31,19 @@ export class VideoController {
     return this.videoService.findAll(category, sortBy);
   }
 
+  @ApiOperation({ summary: 'Get trending videos — most viewed in the last 7 days' })
+  @ApiResponse({ status: 200, description: 'Returns trending videos' })
+  @Get('trending')
+  getTrending() {
+    return this.videoService.getTrending();
+  }
+
   @ApiOperation({ summary: 'Get a single video by ID' })
   @ApiResponse({ status: 200, description: 'Returns the video' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   @Get(':id')
   findOne(@Param('id') id: string, @Ip() ip: string) {
     return this.videoService.findOne(id, ip);
-  }
-
-  @ApiOperation({ summary: 'Get trending videos — most viewed in the last 7 days' })
-  @ApiResponse({ status: 200, description: 'Returns trending videos' })
-  @Get('trending')
-  getTrending() {
-    return this.videoService.getTrending();
   }
 
   @ApiOperation({ summary: 'Get related videos for a video' })

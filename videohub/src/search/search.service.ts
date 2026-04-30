@@ -35,6 +35,8 @@ export class SearchService {
         OR: [
           { title: { contains: q, mode: 'insensitive' } },
           { description: { contains: q, mode: 'insensitive' } },
+          { tags: { has: q.toLowerCase() } },
+          { category: { equals: q, mode: 'insensitive' } },
         ],
         ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
         ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
@@ -53,6 +55,8 @@ export class SearchService {
         viewCount: true,
         duration: true,
         status: true,
+        category: true,
+        tags: true,
         createdAt: true,
         user: { select: { id: true, name: true } },
       },
@@ -79,6 +83,8 @@ export class SearchService {
         name: true,
         bio: true,
         avatarUrl: true,
+        isVerified: true,
+        subscriberCount: true,
         createdAt: true,
       },
     });
