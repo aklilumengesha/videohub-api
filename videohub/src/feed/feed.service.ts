@@ -13,6 +13,8 @@ const videoSelect = {
   viewCount: true,
   duration: true,
   status: true,
+  category: true,
+  tags: true,
   createdAt: true,
   user: { select: { id: true, name: true } },
 };

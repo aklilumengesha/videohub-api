@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { videosApi, type Video } from '@/lib/api';
-import VideoCard from '@/components/VideoCard';
+import LazyVideoCard from '@/components/LazyVideoCard';
+import { VideoGridSkeleton } from '@/components/VideoCardSkeleton';
 
 export default function TrendingPage() {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -29,21 +30,7 @@ export default function TrendingPage() {
 
       <main className="max-w-[1800px] mx-auto px-4 py-6">
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="aspect-video rounded-xl bg-gray-200 mb-3" />
-                <div className="flex gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3.5 bg-gray-200 rounded w-full" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4" />
-                    <div className="h-3 bg-gray-200 rounded w-1/2" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <VideoGridSkeleton count={10} />
         ) : videos.length === 0 ? (
           <div className="text-center py-24">
             <div className="text-6xl mb-4">📊</div>
@@ -60,7 +47,7 @@ export default function TrendingPage() {
                 }`}>
                   #{i + 1}
                 </div>
-                <VideoCard video={video} />
+                <LazyVideoCard video={video} />
               </div>
             ))}
           </div>
