@@ -34,9 +34,10 @@ body {
 
 /* ── Dark mode Tailwind overrides ─────────────────────────────────────────── */
 .dark .bg-white        { background-color: #1a1a1a !important; }
-.dark .bg-gray-50      { background-color: #0f0f0f !important; }
+.dark .bg-gray-50      { background-color: #141414 !important; }
 .dark .bg-gray-100     { background-color: #2a2a2a !important; }
 .dark .bg-gray-200     { background-color: #333333 !important; }
+.dark .bg-gray-900     { background-color: #000000 !important; }
 .dark .border-gray-100 { border-color: #2d2d2d !important; }
 .dark .border-gray-200 { border-color: #2d2d2d !important; }
 .dark .border-gray-300 { border-color: #3d3d3d !important; }
@@ -49,6 +50,33 @@ body {
 .dark .hover\:bg-gray-50:hover  { background-color: #252525 !important; }
 .dark .hover\:bg-gray-100:hover { background-color: #2a2a2a !important; }
 .dark .hover\:bg-gray-200:hover { background-color: #333333 !important; }
+.dark .hover\:text-gray-900:hover { color: #f1f1f1 !important; }
+
+/* Skeleton loaders */
+.dark .animate-pulse .bg-gray-200,
+.dark .bg-gray-200.animate-pulse { background-color: #2a2a2a !important; }
+
+/* Table headers */
+.dark thead.bg-gray-50,
+.dark .bg-gray-50.border-b { background-color: #141414 !important; }
+
+/* Divide lines */
+.dark .divide-gray-100 > * + * { border-color: #2d2d2d !important; }
+.dark .divide-gray-200 > * + * { border-color: #2d2d2d !important; }
+
+/* Shadow — soften in dark mode */
+.dark .shadow-xl  { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.6), 0 10px 10px -5px rgba(0,0,0,0.4) !important; }
+.dark .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8) !important; }
+.dark .shadow-md  { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5) !important; }
+.dark .shadow-sm  { box-shadow: 0 1px 2px 0 rgba(0,0,0,0.4) !important; }
+
+/* Auth pages */
+.dark .min-h-screen.flex.items-center.justify-center { background-color: #0f0f0f; }
+
+/* Modals */
+.dark .fixed.inset-0.bg-black\/50 { background-color: rgba(0,0,0,0.75) !important; }
+
+/* Inputs */
 .dark input,
 .dark textarea,
 .dark select {
@@ -58,6 +86,21 @@ body {
 }
 .dark input::placeholder,
 .dark textarea::placeholder { color: #6b7280; }
+
+/* Blue tinted backgrounds in dark mode */
+.dark .bg-blue-50  { background-color: #1a2744 !important; }
+.dark .text-blue-700 { color: #93c5fd !important; }
+.dark .bg-red-50   { background-color: #2d1515 !important; }
+.dark .text-red-600 { color: #f87171 !important; }
+.dark .bg-green-50 { background-color: #14291a !important; }
+.dark .text-green-600 { color: #4ade80 !important; }
+.dark .bg-yellow-50 { background-color: #2d2510 !important; }
+
+/* Category/tag chips */
+.dark .bg-blue-100  { background-color: #1e3a5f !important; }
+.dark .text-blue-600 { color: #60a5fa !important; }
+.dark .bg-gray-100.text-gray-500,
+.dark .bg-gray-100.text-gray-600 { background-color: #2a2a2a !important; color: #9ca3af !important; }
 
 /* ── Scrollbar utilities ──────────────────────────────────────────────────── */
 .scrollbar-hide {

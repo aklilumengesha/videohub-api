@@ -854,7 +854,8 @@ export default function VideoPage() {
                   value={shareWithTimestamp && currentTime > 0 
                     ? `${window.location.href.split('?')[0]}?t=${Math.floor(currentTime)}` 
                     : window.location.href.split('?')[0]}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm bg-gray-50 focus:outline-none" />
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none"
+                  style={{ background: 'var(--surface)', color: 'var(--foreground)' }} />
                 <button onClick={copyShareLink}
                   className={`px-6 py-3 rounded-lg text-sm font-medium transition-colors ${
                     copied 

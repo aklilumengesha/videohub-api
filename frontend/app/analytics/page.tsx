@@ -136,7 +136,7 @@ export default function AnalyticsPage() {
                   <h2 className="font-bold text-gray-900">Top Videos</h2>
                 </div>
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="border-b" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Video</th>
                       <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Views</th>
@@ -146,7 +146,7 @@ export default function AnalyticsPage() {
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {videoStats.slice(0, 10).map((v: any) => (
-                      <tr key={v.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={v.id} className="hover:bg-gray-100 transition-colors">
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-3">
                             {v.thumbnailUrl && (

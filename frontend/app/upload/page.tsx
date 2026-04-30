@@ -172,7 +172,7 @@ export default function UploadPage() {
   // Processing state
   if (uploadState === 'processing' || uploadState === 'ready') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--surface)' }}>
         <div className="text-center max-w-sm">
           {uploadState === 'ready' ? (
             <>
@@ -197,7 +197,7 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
       <main className="max-w-2xl mx-auto px-6 py-10">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Upload Video</h1>
         <p className="text-gray-500 text-sm mb-8">Share your video with the community</p>
@@ -206,7 +206,8 @@ export default function UploadPage() {
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-6 text-sm">{error}</div>
         )}
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="rounded-xl shadow-sm border p-6 space-y-5"
+          style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
 
           {/* File picker */}
           <div>
@@ -284,7 +285,8 @@ export default function UploadPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
             <select value={category} onChange={e => setCategory(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
               <option value="">Select a category (optional)</option>
               {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>

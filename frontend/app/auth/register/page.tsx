@@ -60,8 +60,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-8">
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--surface)' }}>
+      <div className="w-full max-w-md rounded-xl shadow-md p-8" style={{ background: 'var(--background)' }}>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Create account</h1>
         <p className="text-gray-500 mb-6 text-sm">Join VideoHub today</p>
 

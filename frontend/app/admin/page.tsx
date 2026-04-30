@@ -85,7 +85,7 @@ export default function AdminPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
 
@@ -98,7 +98,8 @@ export default function AdminPage() {
               { label: 'Pending Reports', value: stats.pendingReports, icon: '⚠️' },
               { label: 'Total Reports', value: stats.totalReports, icon: '📋' },
             ].map(s => (
-              <div key={s.label} className="bg-white rounded-xl p-4 border border-gray-100 text-center">
+              <div key={s.label} className="rounded-xl p-4 border text-center"
+                style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
                 <div className="text-2xl mb-1">{s.icon}</div>
                 <div className="text-2xl font-bold text-gray-900">{s.value}</div>
                 <div className="text-xs text-gray-500 mt-0.5">{s.label}</div>
@@ -115,7 +116,7 @@ export default function AdminPage() {
               {['PENDING', 'RESOLVED', 'DISMISSED', 'ALL'].map(s => (
                 <button key={s} onClick={() => loadReports(s)}
                   className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                    filter === s ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    filter === s ? 'text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}>
                   {s}
                 </button>
@@ -126,14 +127,16 @@ export default function AdminPage() {
           {loading ? (
             <div className="text-center py-8 text-gray-400">Loading...</div>
           ) : reports.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center text-gray-400">
+            <div className="rounded-xl p-8 text-center text-gray-400"
+              style={{ background: 'var(--background)' }}>
               <div className="text-3xl mb-2">✅</div>
               <p>No {filter.toLowerCase()} reports</p>
             </div>
           ) : (
             <div className="space-y-3">
               {reports.map(report => (
-                <div key={report.id} className="bg-white rounded-xl p-4 border border-gray-100">
+                <div key={report.id} className="rounded-xl p-4 border"
+                  style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">

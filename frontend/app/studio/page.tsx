@@ -107,6 +107,7 @@ export default function StudioPage() {
   );
 
   return (
+  <>
     <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
       <div className="max-w-7xl mx-auto px-4 py-6">
         
@@ -285,7 +286,7 @@ export default function StudioPage() {
             {/* Videos Table */}
             <div className="rounded-xl overflow-hidden" style={{ background: 'var(--background)' }}>
               <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="border-b" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
                   <tr>
                     <th className="px-4 py-3 text-left">
                       <input type="checkbox" checked={selectedVideos.size === videos.length && videos.length > 0}
@@ -308,7 +309,7 @@ export default function StudioPage() {
                       </td>
                     </tr>
                   ) : videos.map(video => (
-                    <tr key={video.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={video.id} className="hover:bg-gray-100 transition-colors" style={{ borderColor: 'var(--border)' }}>
                       <td className="px-4 py-3">
                         <input type="checkbox" checked={selectedVideos.has(video.id)}
                           onChange={() => toggleVideoSelection(video.id)}
@@ -444,7 +445,7 @@ export default function StudioPage() {
     {editingVideo && (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
         onClick={() => setEditingVideo(null)}>
-        <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6"
+        <div className="rounded-2xl shadow-2xl max-w-lg w-full p-6"
           style={{ background: 'var(--background)' }}
           onClick={e => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-4">
@@ -483,5 +484,6 @@ export default function StudioPage() {
         </div>
       </div>
     )}
+  </>
   );
 }
