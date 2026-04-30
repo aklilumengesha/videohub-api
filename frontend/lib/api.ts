@@ -75,6 +75,8 @@ export interface Video {
   viewCount: number;
   duration?: number;
   status?: string;
+  category?: string;
+  tags?: string[];
   createdAt: string;
   user: { id: string; name: string };
 }

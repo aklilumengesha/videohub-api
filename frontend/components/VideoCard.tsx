@@ -184,6 +184,12 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
             {video.viewCount > 0 ? `${formatViews(video.viewCount)} · ` : ''}
             {timeAgo(video.createdAt)}
           </p>
+
+          {video.category && (
+            <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+              {video.category}
+            </span>
+          )}
         </div>
       </div>
     </Link>

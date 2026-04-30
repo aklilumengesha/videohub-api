@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -41,6 +41,7 @@ function timeAgo(dateStr: string) {
 export default function VideoPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isLoggedIn } = useAuth();
 
   const [video, setVideo] = useState<Video | null>(null);
@@ -175,15 +176,21 @@ export default function VideoPage() {
         likesApi.isLiked(id).then((res: { liked: boolean }) => setLiked(res.liked)).catch(() => {});
         likesApi.isDisliked(id).then((res: { disliked: boolean }) => setDisliked(res.disliked)).catch(() => {});
         // Load watch progress to resume where left off
-        videosApi.getProgress(id).then((res: { progress: number }) => {
-          if (res.progress > 10) setInitialTime(res.progress);
-        }).catch(() => {});
+        // ?t= param from share links takes priority over saved progress
+        const tParam = searchParams.get('t');
+        if (tParam) {
+          setInitialTime(parseInt(tParam, 10));
+        } else {
+          videosApi.getProgress(id).then((res: { progress: number }) => {
+            if (res.progress > 10) setInitialTime(res.progress);
+          }).catch(() => {});
+        }
       }
       videosApi.getChapters(id).then((ch: VideoChapter[]) => setChapters(ch)).catch(() => {});
       videosApi.getSubtitles(id).then((s: VideoSubtitle[]) => setSubtitles(s)).catch(() => {});
     }).catch(() => setError('Video not found'))
       .finally(() => setLoading(false));
-  }, [id, isLoggedIn, commentSort]);
+  }, [id, isLoggedIn, commentSort, searchParams]);
 
   const handleLike = async () => {
     if (!isLoggedIn) { router.push('/auth/login'); return; }
@@ -643,6 +650,24 @@ export default function VideoPage() {
               <button className="text-xs font-semibold text-gray-900 mt-1 hover:underline">
                 {showDesc ? 'Show less' : 'Show more'}
               </button>
+            )}
+
+            {/* Category + Tags */}
+            {(video.category || (video.tags && video.tags.length > 0)) && (
+              <div className="flex flex-wrap gap-2 mt-3" onClick={e => e.stopPropagation()}>
+                {video.category && (
+                  <Link href={`/?category=${encodeURIComponent(video.category)}`}
+                    className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                    {video.category}
+                  </Link>
+                )}
+                {video.tags?.map(tag => (
+                  <Link key={tag} href={`/search?q=${encodeURIComponent(tag)}`}
+                    className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
 
