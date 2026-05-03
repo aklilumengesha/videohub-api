@@ -11,6 +11,7 @@ import {
 import HlsPlayer from '@/components/HlsPlayer';
 import VideoThumbnail from '@/components/VideoThumbnail';
 import CommentThread from '@/components/CommentThread';
+import SubscribeButton from '@/components/SubscribeButton';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { useSwipe } from '@/hooks/useSwipe';
 
@@ -500,6 +501,10 @@ export default function VideoPage() {
                   {formatViews(video.viewCount)} views · {timeAgo(video.createdAt)}
                 </p>
               </div>
+              {/* Don't show subscribe button for own videos */}
+              {currentUserId !== video.user.id && (
+                <SubscribeButton userId={video.user.id} size="sm" />
+              )}
             </div>
 
             {/* Action buttons — YouTube pill style */}

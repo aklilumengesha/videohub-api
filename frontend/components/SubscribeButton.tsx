@@ -26,7 +26,7 @@ export default function SubscribeButton({
   useEffect(() => {
     if (isLoggedIn) {
       usersApi.isFollowing(userId)
-        .then(res => setIsSubscribed(res.following))
+        .then((res: any) => setIsSubscribed(res.isFollowing ?? res.following ?? false))
         .catch(() => {});
     }
   }, [userId, isLoggedIn]);
