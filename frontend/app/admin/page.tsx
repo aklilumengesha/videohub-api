@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { adminApi } from '@/lib/api';
+import { adminApi, usersApi } from '@/lib/api';
 
 interface Report {
   id: string;
@@ -45,8 +45,17 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    Promise.all([adminApi.getStats(), adminApi.getReports('PENDING')])
-      .then(([s, r]) => { setStats(s); setReports(r); })
+    // Check admin status first, then load data
+    usersApi.getMe()
+      .then(user => {
+        if (!user.isAdmin) { setForbidden(true); setLoading(false); return; }
+        return Promise.all([adminApi.getStats(), adminApi.getReports('PENDING')]);
+      })
+      .then(result => {
+        if (!result) return;
+        const [s, r] = result;
+        setStats(s); setReports(r);
+      })
       .catch(() => setForbidden(true))
       .finally(() => setLoading(false));
   }, [isLoggedIn]);
@@ -112,12 +121,15 @@ export default function AdminPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Reports</h2>
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+            <div className="flex gap-1 p-1 rounded-lg" style={{ background: 'var(--surface)' }}>
               {['PENDING', 'RESOLVED', 'DISMISSED', 'ALL'].map(s => (
                 <button key={s} onClick={() => loadReports(s)}
                   className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                    filter === s ? 'text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                  }`}>
+                    filter === s
+                      ? 'text-gray-900 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  style={filter === s ? { background: 'var(--background)' } : {}}>
                   {s}
                 </button>
               ))}
@@ -166,7 +178,7 @@ export default function AdminPage() {
                           Remove Video
                         </button>
                         <button onClick={() => handleResolve(report.id, 'DISMISSED')}
-                          className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-50 transition-colors">
+                          className="px-3 py-1.5 border border-gray-300 text-gray-600 text-xs font-medium rounded-lg hover:bg-gray-100 transition-colors">
                           Dismiss
                         </button>
                       </div>

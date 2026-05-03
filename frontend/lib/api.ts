@@ -58,6 +58,7 @@ export interface User {
   avatarUrl?: string;
   bannerUrl?: string;
   isVerified?: boolean;
+  isAdmin?: boolean;
   subscriberCount?: number;
   createdAt: string;
 }

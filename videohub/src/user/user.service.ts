@@ -33,6 +33,7 @@ export class UserService {
         avatarUrl: true,
         bannerUrl: true,
         isVerified: true,
+        isAdmin: true,
         subscriberCount: true,
         createdAt: true,
         updatedAt: true,
