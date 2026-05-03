@@ -12,13 +12,38 @@ async function bootstrap() {
   // Security headers — relax CSP slightly to allow HLS media loading
   app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow HLS segments to be fetched
-    contentSecurityPolicy: false, // disable CSP — configure per-environment in production
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],  // Next.js needs these
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:', '*'],
+        mediaSrc: ["'self'", 'blob:', '*'],
+        connectSrc: ["'self'", '*'],
+        fontSrc: ["'self'", 'data:'],
+        frameSrc: ["'none'"],
+      },
+    },
+    // Prevent clickjacking
+    frameguard: { action: 'deny' },
+    // Prevent MIME sniffing
+    noSniff: true,
+    // Force HTTPS in production
+    hsts: process.env.NODE_ENV === 'production'
+      ? { maxAge: 31536000, includeSubDomains: true }
+      : false,
   }));
 
-  // Enable CORS for Next.js frontend
+  // Enable CORS — read allowed origins from env for production flexibility
+  const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    : ['http://localhost:3001', 'http://localhost:3000'];
+
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:3000'],
+    origin: allowedOrigins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Global validation pipe

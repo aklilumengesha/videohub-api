@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { mkdirSync } from 'fs';
@@ -196,6 +197,7 @@ export class VideoController {
 
   @ApiOperation({ summary: 'Upload a video file with metadata (requires auth)' })
   @ApiConsumes('multipart/form-data')
+  @Throttle({ default: { ttl: 3600000, limit: 10 } }) // 10 uploads per hour
   @ApiBody({
     schema: {
       type: 'object',
