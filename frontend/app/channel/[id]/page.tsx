@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { usersApi, videosApi, playlistsApi, type Video, type Playlist } from '@/lib/api';
+import { usersApi, videosApi, playlistsApi, type Video, type Playlist, type User } from '@/lib/api';
 import VideoCard from '@/components/VideoCard';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
@@ -17,7 +17,7 @@ export default function ChannelPage() {
   const router = useRouter();
   const { isLoggedIn } = useAuth();
   
-  const [channel, setChannel] = useState<any>(null);
+  const [channel, setChannel] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>('home');
@@ -49,11 +49,11 @@ export default function ChannelPage() {
       if (isSubscribed) {
         await usersApi.unfollow(id);
         setIsSubscribed(false);
-        setChannel((c: any) => ({ ...c, subscriberCount: (c.subscriberCount || 1) - 1 }));
+        setChannel(c => c ? { ...c, subscriberCount: (c.subscriberCount || 1) - 1 } : c);
       } else {
         await usersApi.follow(id);
         setIsSubscribed(true);
-        setChannel((c: any) => ({ ...c, subscriberCount: (c.subscriberCount || 0) + 1 }));
+        setChannel(c => c ? { ...c, subscriberCount: (c.subscriberCount || 0) + 1 } : c);
       }
     } catch { /* ignore */ }
     finally { setSubscribing(false); }

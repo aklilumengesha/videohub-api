@@ -25,7 +25,7 @@ export const tokenStorage = {
 
 // ── Base fetch wrapper ────────────────────────────────────────────────────────
 
-async function apiFetch(path: string, options: RequestInit = {}) {
+async function apiFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
   const token = tokenStorage.getAccessToken();
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
@@ -101,6 +101,38 @@ export interface Notification {
   videoId?: string;
   createdAt: string;
   actor: { id: string; name: string };
+}
+
+export interface AnalyticsOverview {
+  totalVideos: number;
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  subscribers: number;
+  topVideo?: {
+    id: string;
+    title: string;
+    thumbnailUrl?: string;
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+  };
+}
+
+export interface VideoStat {
+  id: string;
+  title: string;
+  thumbnailUrl?: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface DailyView {
+  date: string;
+  views: number;
 }
 
 export interface Playlist {  id: string;

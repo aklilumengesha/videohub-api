@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { analyticsApi, usersApi } from '@/lib/api';
+import type { AnalyticsOverview, VideoStat, DailyView } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -23,9 +24,9 @@ function formatDuration(s?: number) {
 export default function AnalyticsPage() {
   const router = useRouter();
   const { isLoggedIn, loading: authLoading } = useAuth();
-  const [overview, setOverview] = useState<any>(null);
-  const [videoStats, setVideoStats] = useState<any[]>([]);
-  const [dailyViews, setDailyViews] = useState<any[]>([]);
+  const [overview, setOverview] = useState<AnalyticsOverview | null>(null);
+  const [videoStats, setVideoStats] = useState<VideoStat[]>([]);
+  const [dailyViews, setDailyViews] = useState<DailyView[]>([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
 
@@ -50,7 +51,7 @@ export default function AnalyticsPage() {
 
   if (authLoading || !isLoggedIn) return null;
 
-  const maxViews = dailyViews.length > 0 ? Math.max(...dailyViews.map((d: any) => d.views || 0), 1) : 1;
+  const maxViews = dailyViews.length > 0 ? Math.max(...dailyViews.map(d => d.views || 0), 1) : 1;
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
@@ -107,7 +108,7 @@ export default function AnalyticsPage() {
 
                 {/* Bar chart */}
                 <div className="flex items-end gap-1 h-32">
-                  {dailyViews.slice(-days).map((day: any, i: number) => {
+                  {dailyViews.slice(-days).map((day, i: number) => {
                     const height = maxViews > 0 ? Math.max((day.views / maxViews) * 100, 2) : 2;
                     return (
                       <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
@@ -145,7 +146,7 @@ export default function AnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {videoStats.slice(0, 10).map((v: any) => (
+                    {videoStats.slice(0, 10).map((v) => (
                       <tr key={v.id} className="hover:bg-gray-100 transition-colors">
                         <td className="px-6 py-3">
                           <div className="flex items-center gap-3">
