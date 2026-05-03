@@ -435,6 +435,7 @@ export default function VideoPage() {
               />
             ) : video.filePath ? (
               <video src={`${API_URL}/${video.filePath}`} controls className="w-full h-full" preload="metadata"
+                ref={(el) => { if (el && initialTime > 0) { el.currentTime = initialTime; } }}
                 onEnded={startAutoplay}>
                 {subtitles.map((sub, i) => (
                   <track key={sub.id} kind="subtitles" src={`${API_URL}/${sub.filePath}`}
