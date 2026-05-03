@@ -68,6 +68,7 @@ export default function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t md:hidden"
+      aria-label="Mobile navigation"
       style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
       <div className="flex items-end justify-around px-2 pb-safe">
         {NAV_ITEMS.map((item) => {
@@ -77,6 +78,8 @@ export default function MobileNav() {
 
           return (
             <Link key={item.href} href={item.href}
+              aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex flex-col items-center gap-1 py-2 px-3 min-w-[56px] transition-colors ${
                 isUpload ? '' : isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-900'
               }`}>

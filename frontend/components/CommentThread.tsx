@@ -122,6 +122,8 @@ export default function CommentThread({
           {/* Like button */}
           {currentUserId && (
             <button onClick={handleLike}
+              aria-label={liked ? 'Unlike comment' : 'Like comment'}
+              aria-pressed={liked}
               className={`flex items-center gap-1 font-medium transition-colors ${
                 liked ? 'text-blue-600' : 'text-gray-600 hover:text-blue-600'
               }`}>

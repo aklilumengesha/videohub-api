@@ -50,6 +50,8 @@ export default function Sidebar({ isOpen }: SidebarProps) {
     const active = isActive(item.href);
     return (
       <Link key={item.href} href={item.href}
+        aria-label={item.label}
+        aria-current={active ? 'page' : undefined}
         className={`flex items-center gap-4 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
           active ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'
         }`}>
@@ -73,7 +75,8 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   return (
     <aside className={`fixed left-0 top-14 bottom-0 z-40 transition-all duration-200 overflow-y-auto overflow-x-hidden border-r ${
       isOpen ? 'w-56' : 'w-16'
-    }`} style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+    }`} style={{ background: 'var(--background)', borderColor: 'var(--border)' }}
+      role="navigation" aria-label="Sidebar navigation">
       <div className="py-3 px-2 space-y-0.5">
         {NAV_ITEMS.map(renderItem)}
 

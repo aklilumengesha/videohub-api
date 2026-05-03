@@ -94,6 +94,7 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
 
   return (
     <Link href={`/videos/${video.id}`} className="group block"
+      aria-label={`Watch ${video.title}${video.user ? ` by ${video.user.name}` : ''}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}>
       {/* Thumbnail / Preview */}
@@ -134,6 +135,7 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
         <button
           onClick={handleWatchLater}
           title="Save to Watch Later"
+          aria-label={watchLaterSaved ? 'Saved to Watch Later' : 'Save to Watch Later'}
           className={`absolute top-2 right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
             watchLaterSaved
               ? 'bg-green-600 text-white opacity-100'
