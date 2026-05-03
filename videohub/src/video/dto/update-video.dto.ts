@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MinLength, MaxLength, IsArray, ArrayMaxSize } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateVideoDto {
@@ -14,4 +14,16 @@ export class UpdateVideoDto {
   @IsOptional()
   @MaxLength(500)
   description?: string;
+
+  @ApiProperty({ example: 'Gaming', required: false })
+  @IsString()
+  @IsOptional()
+  category?: string;
+
+  @ApiProperty({ example: ['tutorial', 'react'], required: false, type: [String] })
+  @IsArray()
+  @IsOptional()
+  @ArrayMaxSize(10)
+  @IsString({ each: true })
+  tags?: string[];
 }
