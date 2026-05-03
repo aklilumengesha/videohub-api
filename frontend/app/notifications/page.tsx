@@ -6,10 +6,10 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { notificationsApi, type Notification } from '@/lib/api';
 
-const TYPE_META: Record<string, { icon: string; label: (actor: string) => string }> = {
-  NEW_FOLLOWER:    { icon: '👤', label: (a) => `${a} subscribed to your channel` },
-  VIDEO_LIKED:     { icon: '👍', label: (a) => `${a} liked your video` },
-  VIDEO_COMMENTED: { icon: '💬', label: (a) => `${a} commented on your video` },
+const TYPE_META: Record<string, { icon: string; verb: string; color: string }> = {
+  NEW_FOLLOWER:    { icon: '👤', verb: 'subscribed to your channel', color: 'bg-purple-100 text-purple-700' },
+  VIDEO_LIKED:     { icon: '👍', verb: 'liked your video',           color: 'bg-blue-100 text-blue-700' },
+  VIDEO_COMMENTED: { icon: '💬', verb: 'commented on your video',    color: 'bg-green-100 text-green-700' },
 };
 
 function timeAgo(dateStr: string) {
@@ -19,7 +19,33 @@ function timeAgo(dateStr: string) {
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function groupByDate(notifications: Notification[]): { label: string; items: Notification[] }[] {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const yesterday = today - 86400000;
+  const weekAgo = today - 7 * 86400000;
+
+  const groups: Record<string, Notification[]> = {};
+
+  for (const n of notifications) {
+    const t = new Date(n.createdAt).getTime();
+    let label: string;
+    if (t >= today) label = 'Today';
+    else if (t >= yesterday) label = 'Yesterday';
+    else if (t >= weekAgo) label = 'This week';
+    else label = 'Older';
+
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(n);
+  }
+
+  const order = ['Today', 'Yesterday', 'This week', 'Older'];
+  return order.filter(l => groups[l]).map(l => ({ label: l, items: groups[l] }));
 }
 
 export default function NotificationsPage() {
@@ -62,9 +88,13 @@ export default function NotificationsPage() {
 
   if (authLoading || (!isLoggedIn && !authLoading)) return null;
 
+  const groups = groupByDate(notifications);
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--surface)' }}>
       <div className="max-w-2xl mx-auto px-4 py-6">
+
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-gray-900">Notifications</h1>
@@ -76,7 +106,7 @@ export default function NotificationsPage() {
           </div>
           {unreadCount > 0 && (
             <button onClick={handleMarkAllRead} disabled={marking}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50">
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50 transition-colors">
               {marking ? 'Marking...' : 'Mark all as read'}
             </button>
           )}
@@ -101,39 +131,59 @@ export default function NotificationsPage() {
             <p className="text-gray-400 text-sm">When someone subscribes or likes your videos, you&apos;ll see it here</p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {notifications.map(n => {
-              const meta = TYPE_META[n.type] ?? { icon: '🔔', label: (a: string) => `${a} interacted with you` };
-              const href = n.videoId ? `/videos/${n.videoId}` : `/profile/${n.actor.id}`;
+          <div className="space-y-6">
+            {groups.map(group => (
+              <div key={group.label}>
+                {/* Date group label */}
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-1">
+                  {group.label}
+                </p>
+                <div className="space-y-1">
+                  {group.items.map(n => {
+                    const meta = TYPE_META[n.type] ?? { icon: '🔔', verb: 'interacted with you', color: 'bg-gray-100 text-gray-700' };
+                    const href = n.videoId ? `/videos/${n.videoId}` : `/profile/${n.actor.id}`;
 
-              return (
-                <Link key={n.id} href={href}
-                  onClick={() => { if (!n.read) handleMarkRead(n.id); }}
-                  className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-colors hover:bg-gray-100 ${
-                    !n.read ? 'bg-blue-50' : ''
-                  }`}
-                  style={n.read ? { background: 'var(--background)' } : {}}>
-                  {/* Actor avatar */}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {n.actor.name.charAt(0).toUpperCase()}
-                  </div>
+                    return (
+                      <Link key={n.id} href={href}
+                        onClick={() => { if (!n.read) handleMarkRead(n.id); }}
+                        className={`flex items-start gap-3 px-4 py-3 rounded-xl transition-colors hover:bg-gray-100 ${
+                          !n.read ? 'bg-blue-50' : ''
+                        }`}
+                        style={n.read ? { background: 'var(--background)' } : {}}>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-800 leading-snug">
-                      <span className="font-semibold">{n.actor.name}</span>
-                      {' '}
-                      {meta.label('').replace(n.actor.name, '').trim()}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.createdAt)}</p>
-                  </div>
+                        {/* Actor avatar with type icon badge */}
+                        <div className="relative flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                            {n.actor.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className={`absolute -bottom-1 -right-1 text-xs w-5 h-5 rounded-full flex items-center justify-center ${meta.color}`}>
+                            {meta.icon}
+                          </span>
+                        </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-lg">{meta.icon}</span>
-                    {!n.read && <div className="w-2 h-2 bg-blue-600 rounded-full" />}
-                  </div>
-                </Link>
-              );
-            })}
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-800 leading-snug">
+                            <Link href={`/profile/${n.actor.id}`}
+                              className="font-semibold hover:text-blue-600"
+                              onClick={e => e.stopPropagation()}>
+                              {n.actor.name}
+                            </Link>
+                            {' '}{meta.verb}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">{timeAgo(n.createdAt)}</p>
+                        </div>
+
+                        {/* Unread dot */}
+                        {!n.read && (
+                          <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-2" />
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
