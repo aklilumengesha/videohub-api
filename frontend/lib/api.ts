@@ -236,7 +236,7 @@ export const videosApi = {
     return apiFetch('/videos/upload', { method: 'POST', body: formData });
   },
 
-  update: (id: string, data: { title?: string; description?: string }) =>
+  update: (id: string, data: { title?: string; description?: string; category?: string; tags?: string[] }) =>
     apiFetch(`/videos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
 
   remove: (id: string) =>

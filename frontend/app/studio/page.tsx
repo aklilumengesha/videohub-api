@@ -32,6 +32,9 @@ export default function StudioPage() {
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editTagInput, setEditTagInput] = useState('');
+  const [editTags, setEditTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -86,6 +89,9 @@ export default function StudioPage() {
     setEditingVideo(video);
     setEditTitle(video.title);
     setEditDesc(video.description || '');
+    setEditCategory(video.category || '');
+    setEditTags(video.tags || []);
+    setEditTagInput('');
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -93,7 +99,12 @@ export default function StudioPage() {
     if (!editingVideo || !editTitle.trim()) return;
     setSaving(true);
     try {
-      const updated = await videosApi.update(editingVideo.id, { title: editTitle.trim(), description: editDesc.trim() });
+      const updated = await videosApi.update(editingVideo.id, {
+        title: editTitle.trim(),
+        description: editDesc.trim(),
+        category: editCategory || undefined,
+        tags: editTags,
+      });
       setVideos(prev => prev.map(v => v.id === editingVideo.id ? { ...v, ...updated } : v));
       setEditingVideo(null);
     } catch { /* ignore */ }
@@ -467,9 +478,50 @@ export default function StudioPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)}
-                rows={4} maxLength={500}
+                rows={3} maxLength={500}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
-            </div>            <div className="flex gap-3 justify-end">
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select value={editCategory} onChange={e => setEditCategory(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ background: 'var(--background)', color: 'var(--foreground)' }}>
+                <option value="">No category</option>
+                {['Gaming','Music','Education','Entertainment','Sports','Technology','Travel','Food','Fashion','News','Other'].map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+              <div className="border border-gray-300 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500">
+                <div className="flex flex-wrap gap-1.5 mb-1">
+                  {editTags.map(tag => (
+                    <span key={tag} className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full">
+                      #{tag}
+                      <button type="button" onClick={() => setEditTags(prev => prev.filter(t => t !== tag))}
+                        className="hover:text-red-500">×</button>
+                    </span>
+                  ))}
+                </div>
+                <input type="text" value={editTagInput}
+                  onChange={e => setEditTagInput(e.target.value)}
+                  onKeyDown={e => {
+                    if ((e.key === 'Enter' || e.key === ',') && editTagInput.trim()) {
+                      e.preventDefault();
+                      const tag = editTagInput.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+                      if (tag && !editTags.includes(tag) && editTags.length < 10) {
+                        setEditTags(prev => [...prev, tag]);
+                      }
+                      setEditTagInput('');
+                    }
+                  }}
+                  placeholder={editTags.length < 10 ? 'Add tag, press Enter...' : 'Max 10 tags'}
+                  disabled={editTags.length >= 10}
+                  className="w-full text-sm outline-none disabled:opacity-50 bg-transparent" />
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end">
               <button type="button" onClick={() => setEditingVideo(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
                 Cancel
