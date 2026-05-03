@@ -133,4 +133,16 @@ export class UserController {
   clearHistory(@Request() req: { user: { userId: string } }) {
     return this.userService.clearHistory(req.user.userId);
   }
+
+  @ApiOperation({ summary: 'Remove a single video from watch history' })
+  @ApiResponse({ status: 200, description: 'Removed from history' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Delete('me/history/:videoId')
+  removeFromHistory(
+    @Request() req: { user: { userId: string } },
+    @Param('videoId') videoId: string,
+  ) {
+    return this.userService.removeFromHistory(req.user.userId, videoId);
+  }
 }

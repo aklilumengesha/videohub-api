@@ -129,6 +129,8 @@ export class UserService {
       orderBy: { watchedAt: 'desc' },
       select: {
         watchedAt: true,
+        progress: true,
+        completed: true,
         video: {
           select: {
             id: true,
@@ -148,6 +150,11 @@ export class UserService {
     const nextCursor = hasMore ? data[data.length - 1].video.id : null;
 
     return { items: data, nextCursor };
+  }
+
+  async removeFromHistory(userId: string, videoId: string) {
+    await this.prisma.watchHistory.deleteMany({ where: { userId, videoId } });
+    return { message: 'Removed from history' };
   }
 
   async clearHistory(userId: string) {

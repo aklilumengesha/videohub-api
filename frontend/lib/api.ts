@@ -207,6 +207,9 @@ export const usersApi = {
   clearHistory: () =>
     apiFetch('/users/me/history', { method: 'DELETE' }),
 
+  removeFromHistory: (videoId: string) =>
+    apiFetch(`/users/me/history/${videoId}`, { method: 'DELETE' }),
+
   getFollowers: (id: string, cursor?: string) =>
     apiFetch(`/users/${id}/followers${cursor ? `?cursor=${cursor}` : ''}`),
 

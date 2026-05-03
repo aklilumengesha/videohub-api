@@ -9,6 +9,8 @@ import VideoThumbnail from '@/components/VideoThumbnail';
 
 interface HistoryItem {
   watchedAt: string;
+  progress: number;
+  completed: boolean;
   video: {
     id: string;
     title: string;
@@ -92,6 +94,15 @@ export default function HistoryPage() {
     } finally { setClearing(false); }
   };
 
+  const handleRemove = async (videoId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await usersApi.removeFromHistory(videoId);
+      setItems(prev => prev.filter(item => item.video.id !== videoId));
+    } catch { /* ignore */ }
+  };
+
   if (authLoading || (!isLoggedIn && !authLoading)) return null;
 
   return (
@@ -153,6 +164,16 @@ export default function HistoryPage() {
                       {formatDuration(item.video.duration)}
                     </span>
                   )}
+                  {/* Progress bar */}
+                  {item.progress > 0 && item.video.duration && !item.completed && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+                      <div className="h-full bg-red-500 transition-all"
+                        style={{ width: `${Math.min((item.progress / item.video.duration) * 100, 100)}%` }} />
+                    </div>
+                  )}
+                  {item.completed && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500" />
+                  )}
                 </div>
 
                 {/* Info */}
@@ -165,7 +186,21 @@ export default function HistoryPage() {
                     {item.video.viewCount > 0 ? `${formatViews(item.video.viewCount)} · ` : ''}
                     Watched {timeAgo(item.watchedAt)}
                   </p>
+                  {item.progress > 0 && item.video.duration && !item.completed && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {formatDuration(item.progress)} / {formatDuration(item.video.duration)}
+                    </p>
+                  )}
                 </div>
+
+                {/* Remove button */}
+                <button onClick={(e) => handleRemove(item.video.id, e)}
+                  title="Remove from history"
+                  className="self-start mt-1 p-1.5 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-full hover:bg-red-50 flex-shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </Link>
             ))}
 
