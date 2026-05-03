@@ -441,7 +441,7 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
                     </Link>
                     <Link href="/analytics" onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                      <span className="text-base">�</span>  Analytics
+                      <span className="text-base">📊</span> Analytics
                     </Link>
                     <Link href="/playlists" onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors">

@@ -25,7 +25,7 @@ export const tokenStorage = {
 
 // ── Base fetch wrapper ────────────────────────────────────────────────────────
 
-async function apiFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+async function apiFetch(path: string, options: RequestInit = {}) {
   const token = tokenStorage.getAccessToken();
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
