@@ -219,6 +219,8 @@ export class VideoService implements OnModuleInit {
         viewCount: true,
         duration: true,
         status: true,
+        category: true,
+        tags: true,
         createdAt: true,
         user: { select: { id: true, name: true } },
       },
@@ -226,37 +228,69 @@ export class VideoService implements OnModuleInit {
   }
 
   async getRelated(id: string, limit = 8) {
-    // Get the current video to find its creator
+    // Get the current video to find its category, tags, and creator
     const current = await this.prisma.video.findUnique({
       where: { id },
-      select: { userId: true },
+      select: { userId: true, category: true, tags: true },
     });
 
     if (!current) throw new NotFoundException('Video not found');
 
-    // Return other READY videos — prioritise same creator, then recent
-    return this.prisma.video.findMany({
-      where: {
-        id: { not: id },       // exclude current video
-        status: 'READY',
-      },
-      take: limit,
-      orderBy: [
-        // Videos from the same creator come first
-        { userId: current.userId ? 'asc' : 'desc' },
-        { createdAt: 'desc' },
-      ],
-      select: {
-        id: true,
-        title: true,
-        thumbnailUrl: true,
-        filePath: true,
-        duration: true,
-        viewCount: true,
-        createdAt: true,
-        user: { select: { id: true, name: true } },
-      },
+    const videoSelect = {
+      id: true,
+      title: true,
+      thumbnailUrl: true,
+      filePath: true,
+      duration: true,
+      viewCount: true,
+      category: true,
+      tags: true,
+      createdAt: true,
+      user: { select: { id: true, name: true } },
+    };
+
+    // 1. Same category (excluding current video and same creator)
+    const byCategoryPromise = current.category
+      ? this.prisma.video.findMany({
+          where: { id: { not: id }, status: 'READY', category: current.category },
+          take: Math.ceil(limit / 2),
+          orderBy: { viewCount: 'desc' },
+          select: videoSelect,
+        })
+      : Promise.resolve([]);
+
+    // 2. Same creator
+    const byCreatorPromise = this.prisma.video.findMany({
+      where: { id: { not: id }, status: 'READY', userId: current.userId },
+      take: Math.ceil(limit / 3),
+      orderBy: { createdAt: 'desc' },
+      select: videoSelect,
     });
+
+    // 3. Recent fallback
+    const recentPromise = this.prisma.video.findMany({
+      where: { id: { not: id }, status: 'READY' },
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+      select: videoSelect,
+    });
+
+    const [byCategory, byCreator, recent] = await Promise.all([
+      byCategoryPromise, byCreatorPromise, recentPromise,
+    ]);
+
+    // Merge and deduplicate, prioritising category > creator > recent
+    const seen = new Set<string>([id]);
+    const results: typeof recent = [];
+
+    for (const v of [...byCategory, ...byCreator, ...recent]) {
+      if (!seen.has(v.id) && results.length < limit) {
+        seen.add(v.id);
+        results.push(v);
+      }
+    }
+
+    return results;
   }
 
   async getStatus(id: string) {
