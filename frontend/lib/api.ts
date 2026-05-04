@@ -60,6 +60,7 @@ export interface User {
   isVerified?: boolean;
   isAdmin?: boolean;
   subscriberCount?: number;
+  featuredVideoId?: string | null;
   createdAt: string;
 }
 
@@ -252,6 +253,11 @@ export const usersApi = {
 
   getFollowing: (id: string, cursor?: string) =>
     apiFetch(`/users/${id}/following${cursor ? `?cursor=${cursor}` : ''}`),
+
+  setFeaturedVideo: (videoId: string | null) =>
+    apiFetch('/users/me/featured-video', { method: 'PUT', body: JSON.stringify({ videoId }) }),
+
+  getSubscriptions: () => apiFetch('/users/me/subscriptions'),
 };
 
 // ── Videos API ────────────────────────────────────────────────────────────────

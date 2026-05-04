@@ -19,6 +19,7 @@ model User {
   isAdmin      Boolean  @default(false)
   isVerified   Boolean  @default(false)  // verification badge
   subscriberCount Int   @default(0)      // cached count for performance
+  featuredVideoId String?               // pinned featured video on channel page
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

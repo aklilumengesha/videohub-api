@@ -157,4 +157,25 @@ export class UserController {
   ) {
     return this.userService.removeFromHistory(req.user.userId, videoId);
   }
+
+  @ApiOperation({ summary: 'Set or clear the featured video on your channel (owner only)' })
+  @ApiResponse({ status: 200, description: 'Featured video updated' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Put('me/featured-video')
+  setFeaturedVideo(
+    @Request() req: { user: { userId: string } },
+    @Body() body: { videoId: string | null },
+  ) {
+    return this.userService.setFeaturedVideo(req.user.userId, body.videoId);
+  }
+
+  @ApiOperation({ summary: 'Get channels the current user is subscribed to' })
+  @ApiResponse({ status: 200, description: 'Returns list of subscribed channels' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/subscriptions')
+  getSubscriptions(@Request() req: { user: { userId: string } }) {
+    return this.userService.getSubscriptions(req.user.userId);
+  }
 }

@@ -24,6 +24,10 @@ export default function ChannelPage() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
+  const [pinning, setPinning] = useState(false);
+  const [myId, setMyId] = useState<string | null>(null);
+
+  const isOwner = myId === id;
 
   useEffect(() => {
     setLoading(true);
@@ -37,6 +41,7 @@ export default function ChannelPage() {
       setPlaylists(pls);
       if (isLoggedIn) {
         usersApi.isFollowing(id).then((res: any) => setIsSubscribed(res.isFollowing ?? res.following ?? false)).catch(() => {});
+        usersApi.getMe().then((me: any) => setMyId(me.id)).catch(() => {});
       }
     }).catch(() => router.push('/'))
       .finally(() => setLoading(false));
@@ -57,6 +62,16 @@ export default function ChannelPage() {
       }
     } catch { /* ignore */ }
     finally { setSubscribing(false); }
+  };
+
+  const handlePinFeatured = async (videoId: string | null) => {
+    if (!isOwner) return;
+    setPinning(true);
+    try {
+      await usersApi.setFeaturedVideo(videoId);
+      setChannel(c => c ? { ...c, featuredVideoId: videoId } : c);
+    } catch { /* ignore */ }
+    finally { setPinning(false); }
   };
 
   if (loading) return (
@@ -157,24 +172,67 @@ export default function ChannelPage() {
         <div className="pb-12">
           {activeTab === 'home' && (
             <div className="space-y-8">
-              {/* Featured Video */}
-              {videos.length > 0 && (
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 mb-4">Featured</h2>
-                  <div className="max-w-2xl">
-                    <VideoCard video={videos[0]} />
+              {/* Featured Video — pinned by owner, or falls back to most recent */}
+              {videos.length > 0 && (() => {
+                const featured = channel?.featuredVideoId
+                  ? videos.find(v => v.id === channel.featuredVideoId) ?? videos[0]
+                  : videos[0];
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-bold text-gray-900">Featured</h2>
+                      {isOwner && (
+                        <div className="flex items-center gap-2">
+                          {channel?.featuredVideoId && (
+                            <button
+                              onClick={() => handlePinFeatured(null)}
+                              disabled={pinning}
+                              className="text-xs text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                            >
+                              Unpin
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="max-w-2xl relative group">
+                      <VideoCard video={featured} />
+                      {isOwner && featured.id !== channel?.featuredVideoId && (
+                        <button
+                          onClick={() => handlePinFeatured(featured.id)}
+                          disabled={pinning}
+                          className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                        >
+                          📌 Pin as featured
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Recent Uploads */}
               {videos.length > 1 && (
                 <div>
                   <h2 className="text-lg font-bold text-gray-900 mb-4">Recent uploads</h2>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {videos.slice(1, 5).map(video => (
-                      <VideoCard key={video.id} video={video} />
-                    ))}
+                    {videos
+                      .filter(v => v.id !== (channel?.featuredVideoId ?? videos[0]?.id))
+                      .slice(0, 4)
+                      .map(video => (
+                        <div key={video.id} className="relative group">
+                          <VideoCard video={video} />
+                          {isOwner && (
+                            <button
+                              onClick={() => handlePinFeatured(video.id)}
+                              disabled={pinning}
+                              className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                            >
+                              📌 Pin
+                            </button>
+                          )}
+                        </div>
+                      ))}
                   </div>
                 </div>
               )}

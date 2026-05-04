@@ -55,6 +55,7 @@ export class UserService {
         bannerUrl: true,
         isVerified: true,
         subscriberCount: true,
+        featuredVideoId: true,
         createdAt: true,
       },
     });
@@ -69,9 +70,9 @@ export class UserService {
       bannerUrl: user.bannerUrl,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
-      subscriberCount: user.subscriberCount,  // use cached counter (kept in sync by follow service)
-    };
-  }
+      subscriberCount: user.subscriberCount,
+      featuredVideoId: user.featuredVideoId,
+    };  }
 
   async getUserVideos(userId: string) {
     // Verify user exists first
@@ -179,5 +180,28 @@ export class UserService {
   async clearHistory(userId: string) {
     await this.prisma.watchHistory.deleteMany({ where: { userId } });
     return { message: 'Watch history cleared' };
+  }
+
+  async setFeaturedVideo(userId: string, videoId: string | null) {
+    if (videoId) {
+      const video = await this.prisma.video.findUnique({ where: { id: videoId } });
+      if (!video) throw new NotFoundException('Video not found');
+      if (video.userId !== userId) throw new Error('Not your video');
+    }
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { featuredVideoId: videoId },
+    });
+    return { featuredVideoId: videoId };
+  }
+
+  async getSubscriptions(userId: string) {
+    return this.prisma.follow.findMany({
+      where: { followerId: userId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        following: { select: { id: true, name: true, avatarUrl: true } },
+      },
+    });
   }
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { videosApi, feedApi } from '@/lib/api';
+import { videosApi, feedApi, usersApi } from '@/lib/api';
 import LazyVideoCard from '@/components/LazyVideoCard';
 import VideoShelf from '@/components/VideoShelf';
 import InfiniteScrollSentinel from '@/components/InfiniteScrollSentinel';
@@ -12,6 +12,12 @@ import type { Video } from '@/lib/api';
 
 const CATEGORIES = ['All', 'Gaming', 'Music', 'Education', 'Entertainment', 'Sports', 'Technology', 'Travel', 'Food', 'Fashion', 'News'];
 
+interface ContinueWatchingItem {
+  progress: number;
+  watchedAt: string;
+  video: Video;
+}
+
 export default function HomePage() {
   const { isLoggedIn, loading } = useAuth();
   const [allVideos, setAllVideos] = useState<Video[]>([]);
@@ -19,6 +25,7 @@ export default function HomePage() {
   const [loadingMoreGrid, setLoadingMoreGrid] = useState(false);
   const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
   const [personalizedVideos, setPersonalizedVideos] = useState<Video[]>([]);
+  const [continueWatching, setContinueWatching] = useState<ContinueWatchingItem[]>([]);
   const [categoryVideos, setCategoryVideos] = useState<Record<string, Video[]>>({});
   const [activeCategory, setActiveCategory] = useState('All');
   const [viewMode, setViewMode] = useState<'shelves' | 'grid'>('shelves');
@@ -58,6 +65,9 @@ export default function HomePage() {
           if (isLoggedIn) {
             const personalized = await feedApi.getPersonalized().catch(() => []);
             setPersonalizedVideos(personalized.slice(0, 10));
+
+            const cw = await usersApi.getContinueWatching(8).catch(() => []);
+            setContinueWatching(cw);
           }
 
           const categories = ['Gaming', 'Music', 'Education', 'Entertainment'];
@@ -153,6 +163,18 @@ export default function HomePage() {
         ) : activeCategory === 'All' && viewMode === 'shelves' ? (
           /* Shelf view - YouTube style horizontal sections */
           <div className="space-y-8">
+            {/* Continue watching for logged-in users */}
+            {isLoggedIn && continueWatching.length > 0 && (
+              <VideoShelf
+                title="Continue watching"
+                videos={continueWatching.map(item => ({
+                  ...item.video,
+                  _progress: item.progress,
+                }))}
+                icon="▶️"
+              />
+            )}
+
             {/* Personalized feed for logged-in users */}
             {isLoggedIn && personalizedVideos.length > 0 && (
               <VideoShelf

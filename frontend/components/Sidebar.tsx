@@ -5,9 +5,16 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { usersApi } from '@/lib/api';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 interface SidebarProps {
   isOpen: boolean;
+}
+
+interface Subscription {
+  following: { id: string; name: string; avatarUrl?: string };
 }
 
 const NAV_ITEMS = [
@@ -33,11 +40,15 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   const pathname = usePathname();
   const { isLoggedIn } = useAuth();
   const [myChannelHref, setMyChannelHref] = useState('/channel');
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
 
   useEffect(() => {
     if (!isLoggedIn) return;
     usersApi.getMe()
       .then(u => setMyChannelHref(`/channel/${u.id}`))
+      .catch(() => {});
+    usersApi.getSubscriptions()
+      .then((subs: Subscription[]) => setSubscriptions(subs.slice(0, 8)))
       .catch(() => {});
   }, [isLoggedIn]);
 
@@ -96,6 +107,33 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
             <SectionDivider label="Create" />
             {CREATOR_ITEMS.map(renderItem)}
+
+            {/* Subscriptions */}
+            {subscriptions.length > 0 && (
+              <>
+                <SectionDivider label="Subscriptions" />
+                {subscriptions.map(({ following: ch }) => {
+                  const active = pathname === `/channel/${ch.id}`;
+                  return (
+                    <Link key={ch.id} href={`/channel/${ch.id}`}
+                      aria-label={ch.name}
+                      aria-current={active ? 'page' : undefined}
+                      className={`flex items-center gap-4 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        active ? 'bg-gray-100 text-gray-900' : 'text-gray-700 hover:bg-gray-100'
+                      }`}>
+                      <span className="w-6 h-6 flex-shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                        {ch.avatarUrl ? (
+                          <Image src={`${API_URL}/${ch.avatarUrl}`} alt={ch.name} width={24} height={24} className="w-full h-full object-cover" unoptimized />
+                        ) : (
+                          ch.name.charAt(0).toUpperCase()
+                        )}
+                      </span>
+                      {isOpen && <span className="truncate">{ch.name}</span>}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
           </>
         )}
 
