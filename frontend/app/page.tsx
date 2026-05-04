@@ -25,6 +25,7 @@ export default function HomePage() {
   const [loadingMoreGrid, setLoadingMoreGrid] = useState(false);
   const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
   const [personalizedVideos, setPersonalizedVideos] = useState<Video[]>([]);
+  const [exploreVideos, setExploreVideos] = useState<Video[]>([]);
   const [continueWatching, setContinueWatching] = useState<ContinueWatchingItem[]>([]);
   const [categoryVideos, setCategoryVideos] = useState<Record<string, Video[]>>({});
   const [activeCategory, setActiveCategory] = useState('All');
@@ -69,6 +70,10 @@ export default function HomePage() {
             const cw = await usersApi.getContinueWatching(8).catch(() => []);
             setContinueWatching(cw);
           }
+
+          // "New to you" — videos from channels the user doesn't follow (or popular for guests)
+          const explore = await feedApi.getExplore().catch(() => []);
+          setExploreVideos(explore.slice(0, 10));
 
           const categories = ['Gaming', 'Music', 'Education', 'Entertainment'];
           const categoryData: Record<string, Video[]> = {};
@@ -199,6 +204,16 @@ export default function HomePage() {
                 title="Latest uploads"
                 videos={allVideos.slice(0, 10)}
                 icon="🆕"
+              />
+            )}
+
+            {/* New to you — explore videos from unfollowed channels */}
+            {exploreVideos.length > 0 && (
+              <VideoShelf
+                title="New to you"
+                videos={exploreVideos}
+                icon="🌐"
+                viewAllLink="/feed"
               />
             )}
 

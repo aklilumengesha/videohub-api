@@ -70,6 +70,11 @@ export default function VideoPage() {
   const [initialTime, setInitialTime] = useState(0);
   const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Transcript state
+  const [showTranscript, setShowTranscript] = useState(false);
+  const [transcriptCues, setTranscriptCues] = useState<Array<{ start: number; end: number; text: string }>>([]);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
+
   const [showReportMenu, setShowReportMenu] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reportDone, setReportDone] = useState(false);
@@ -369,6 +374,46 @@ export default function VideoPage() {
   const cancelAutoplay = () => {
     if (autoplayTimerRef.current) clearInterval(autoplayTimerRef.current);
     setAutoplayCountdown(null);
+  };
+
+  // Parse a VTT file into cue objects
+  const parseVtt = (vttText: string) => {
+    const cues: Array<{ start: number; end: number; text: string }> = [];
+    const timeToSec = (t: string) => {
+      const parts = t.trim().split(':').map(Number);
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      return parts[0] * 60 + parts[1];
+    };
+    const blocks = vttText.split(/\n\n+/);
+    for (const block of blocks) {
+      const lines = block.trim().split('\n');
+      const timeLine = lines.find(l => l.includes('-->'));
+      if (!timeLine) continue;
+      const [startStr, endStr] = timeLine.split('-->');
+      const text = lines
+        .slice(lines.indexOf(timeLine) + 1)
+        .join(' ')
+        .replace(/<[^>]+>/g, '') // strip VTT tags
+        .trim();
+      if (text) cues.push({ start: timeToSec(startStr), end: timeToSec(endStr), text });
+    }
+    return cues;
+  };
+
+  const handleToggleTranscript = async () => {
+    if (showTranscript) { setShowTranscript(false); return; }
+    setShowTranscript(true);
+    if (transcriptCues.length > 0 || transcriptLoading) return;
+    // Use the first subtitle track
+    const sub = subtitles[0];
+    if (!sub) return;
+    setTranscriptLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/${sub.filePath}`);
+      const text = await res.text();
+      setTranscriptCues(parseVtt(text));
+    } catch { /* ignore */ }
+    finally { setTranscriptLoading(false); }
   };
 
   // Clean up timer on unmount or video change
@@ -723,6 +768,66 @@ export default function VideoPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Transcript viewer — shown when subtitles are available */}
+          {subtitles.length > 0 && (
+            <div className="rounded-xl overflow-hidden" style={{ background: 'var(--background)' }}>
+              <button
+                onClick={handleToggleTranscript}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-900">Transcript</span>
+                  {subtitles[0]?.label && (
+                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                      {subtitles[0].label}
+                    </span>
+                  )}
+                </div>
+                <svg
+                  className={`w-4 h-4 text-gray-500 transition-transform ${showTranscript ? 'rotate-180' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {showTranscript && (
+                <div className="border-t max-h-72 overflow-y-auto" style={{ borderColor: 'var(--border)' }}>
+                  {transcriptLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : transcriptCues.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-6">No transcript available</p>
+                  ) : (
+                    <div className="divide-y" style={{ borderColor: 'var(--border)' }}>
+                      {transcriptCues.map((cue, i) => (
+                        <button
+                          key={i}
+                          onClick={() => seekTo(cue.start)}
+                          className={`w-full text-left flex gap-3 px-4 py-2 hover:bg-gray-50 transition-colors group ${
+                            currentTime >= cue.start && currentTime < cue.end ? 'bg-blue-50' : ''
+                          }`}
+                        >
+                          <span className="text-xs font-mono text-blue-600 flex-shrink-0 pt-0.5 w-10">
+                            {formatDuration(Math.floor(cue.start))}
+                          </span>
+                          <span className={`text-sm leading-relaxed ${
+                            currentTime >= cue.start && currentTime < cue.end
+                              ? 'text-blue-700 font-medium'
+                              : 'text-gray-700 group-hover:text-gray-900'
+                          }`}>
+                            {cue.text}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
