@@ -562,8 +562,12 @@ export default function HlsPlayer({
               <div className="relative">
                 <button 
                   onClick={() => setShowQualityMenu(!showQualityMenu)}
-                  className="px-2 py-1 text-sm hover:bg-white/20 rounded transition-colors"
+                  className="px-2 py-1 text-sm hover:bg-white/20 rounded transition-colors flex items-center gap-1"
                 >
+                  {/* Quality badge — highlights HD/4K */}
+                  {quality !== 'auto' && (quality === '1080p' || quality === '1440p' || quality === '2160p') && (
+                    <span className="text-[10px] font-bold bg-white text-black px-1 rounded leading-tight">HD</span>
+                  )}
                   ⚙ {quality}
                 </button>
                 {showQualityMenu && (

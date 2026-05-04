@@ -129,6 +129,12 @@ export default function ChannelPage() {
               <span>{formatCount(channel.subscriberCount || 0)} subscribers</span>
               <span>•</span>
               <span>{videos.length} videos</span>
+              {videos.length > 0 && (
+                <>
+                  <span>•</span>
+                  <span>{formatCount(videos.reduce((sum, v) => sum + (v.viewCount || 0), 0))} views</span>
+                </>
+              )}
             </div>
             {channel.bio && (
               <p className="text-sm text-gray-600 line-clamp-2">{channel.bio}</p>
@@ -296,6 +302,7 @@ export default function ChannelPage() {
                   <p>Joined {new Date(channel.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                   <p>{formatCount(channel.subscriberCount || 0)} subscribers</p>
                   <p>{videos.length} videos</p>
+                  <p>{formatCount(videos.reduce((sum, v) => sum + (v.viewCount || 0), 0))} total views</p>
                 </div>
               </div>
             </div>
