@@ -56,7 +56,6 @@ export class UserService {
         isVerified: true,
         subscriberCount: true,
         createdAt: true,
-        _count: { select: { followers: true } },
       },
     });
 
@@ -70,7 +69,7 @@ export class UserService {
       bannerUrl: user.bannerUrl,
       isVerified: user.isVerified,
       createdAt: user.createdAt,
-      subscriberCount: user._count.followers,
+      subscriberCount: user.subscriberCount,  // use cached counter (kept in sync by follow service)
     };
   }
 

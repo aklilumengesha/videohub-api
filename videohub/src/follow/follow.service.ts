@@ -22,7 +22,13 @@ export class FollowService {
     });
     if (existing) throw new ConflictException('Already following this user');
 
-    await this.prisma.follow.create({ data: { followerId, followingId } });
+    await this.prisma.$transaction([
+      this.prisma.follow.create({ data: { followerId, followingId } }),
+      this.prisma.user.update({
+        where: { id: followingId },
+        data: { subscriberCount: { increment: 1 } },
+      }),
+    ]);
 
     // Notify the followed user (fire-and-forget)
     this.notifications.create(followingId, followerId, 'NEW_FOLLOWER');
@@ -36,9 +42,15 @@ export class FollowService {
     });
     if (!existing) throw new NotFoundException('Not following this user');
 
-    await this.prisma.follow.delete({
-      where: { followerId_followingId: { followerId, followingId } },
-    });
+    await this.prisma.$transaction([
+      this.prisma.follow.delete({
+        where: { followerId_followingId: { followerId, followingId } },
+      }),
+      this.prisma.user.update({
+        where: { id: followingId },
+        data: { subscriberCount: { decrement: 1 } },
+      }),
+    ]);
 
     return { message: 'Unfollowed', followingId };
   }
