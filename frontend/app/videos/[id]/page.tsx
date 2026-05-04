@@ -91,6 +91,10 @@ export default function VideoPage() {
   const playlistId = searchParams.get('playlist');
   const [playlistQueue, setPlaylistQueue] = useState<Playlist | null>(null);
 
+  // End screen — shown in last 20s and on video end
+  const [showEndScreen, setShowEndScreen] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
+
   // Autoplay next video
   const [autoplayCountdown, setAutoplayCountdown] = useState<number | null>(null);
   const autoplayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -169,6 +173,8 @@ export default function VideoPage() {
     setChapters([]);
     setSubtitles([]);
     setLiked(false);
+    setShowEndScreen(false);
+    setVideoDuration(0);
     setShowDesc(false);
 
     Promise.all([
@@ -315,6 +321,21 @@ export default function VideoPage() {
   // Save progress every 5 seconds while watching
   const handleTimeUpdate = (currentTime: number) => {
     setCurrentTime(currentTime);
+
+    // Capture duration from the video element if not yet set
+    if (!videoDuration) {
+      const el = document.querySelector('video') as HTMLVideoElement | null;
+      if (el?.duration && isFinite(el.duration)) setVideoDuration(el.duration);
+    }
+
+    // Show end screen in the last 20 seconds
+    const dur = videoDuration || (document.querySelector('video') as HTMLVideoElement | null)?.duration || 0;
+    if (dur > 30 && currentTime >= dur - 20) {
+      setShowEndScreen(true);
+    } else {
+      setShowEndScreen(false);
+    }
+
     if (!isLoggedIn) return;
     if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
     progressSaveTimerRef.current = setTimeout(() => {
@@ -514,6 +535,80 @@ export default function VideoPage() {
                 <span className="text-4xl">🎬</span>
               </div>
             )}
+
+            {/* End screen — shown in last 20 seconds */}
+            {showEndScreen && autoplayCountdown === null && (related.length > 0 || playlistQueue?.videos) && (() => {
+              // Determine next video
+              let nextVideo: { id: string; title: string; thumbnailUrl?: string; duration?: number; user: { id: string; name: string } } | null = null;
+              if (playlistQueue?.videos) {
+                const items = playlistQueue.videos.sort((a, b) => a.position - b.position);
+                const idx = items.findIndex(item => item.video.id === id);
+                if (idx !== -1 && idx < items.length - 1) nextVideo = items[idx + 1].video as unknown as typeof nextVideo;
+              }
+              if (!nextVideo && related.length > 0) nextVideo = related[0];
+              if (!nextVideo) return null;
+              const nextDest = `/videos/${nextVideo.id}${playlistId ? `?playlist=${playlistId}` : ''}`;
+              return (
+                <div className="absolute inset-0 pointer-events-none">
+                  {/* Next video card — bottom right */}
+                  <div className="absolute bottom-16 right-4 pointer-events-auto">
+                    <p className="text-white text-xs font-medium mb-1.5 opacity-80">Up next</p>
+                    <Link href={nextDest}
+                      className="flex gap-2 bg-black/80 hover:bg-black/90 rounded-xl p-2 transition-colors w-56 group">
+                      <div className="relative w-20 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-800">
+                        {nextVideo.thumbnailUrl ? (
+                          <img src={`${API_URL}/${nextVideo.thumbnailUrl}`} alt={nextVideo.title}
+                            className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-500 text-lg">🎬</div>
+                        )}
+                        {nextVideo.duration && (
+                          <span className="absolute bottom-0.5 right-0.5 bg-black/90 text-white text-[9px] px-1 rounded font-medium">
+                            {formatDuration(nextVideo.duration)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-xs font-semibold line-clamp-2 leading-snug group-hover:text-blue-300 transition-colors">
+                          {nextVideo.title}
+                        </p>
+                        <p className="text-gray-400 text-[10px] mt-0.5 truncate">{nextVideo.user.name}</p>
+                      </div>
+                    </Link>
+                  </div>
+
+                  {/* Subscribe card — bottom left */}
+                  {video && currentUserId !== video.user.id && (
+                    <div className="absolute bottom-16 left-4 pointer-events-auto">
+                      <div className="bg-black/80 rounded-xl p-3 flex flex-col items-center gap-2 w-36">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                          {video.user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <p className="text-white text-xs font-medium text-center truncate w-full">{video.user.name}</p>
+                        <SubscribeButton userId={video.user.id} size="sm" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Watch again — center */}
+                  <div className="absolute bottom-16 left-1/2 -translate-x-1/2 pointer-events-auto">
+                    <button
+                      onClick={() => {
+                        const el = document.querySelector('video') as HTMLVideoElement | null;
+                        if (el) { el.currentTime = 0; el.play().catch(() => {}); }
+                        setShowEndScreen(false);
+                      }}
+                      className="bg-white/20 hover:bg-white/30 text-white text-xs font-medium px-4 py-2 rounded-full backdrop-blur-sm transition-colors flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                      </svg>
+                      Watch again
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Autoplay countdown overlay */}
             {autoplayCountdown !== null && (related.length > 0 || playlistQueue?.videos) && (() => {
