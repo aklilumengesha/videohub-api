@@ -152,6 +152,25 @@ export class UserService {
     return { items: data, nextCursor };
   }
 
+  async getContinueWatching(userId: string, limit = 10) {
+    return this.prisma.watchHistory.findMany({
+      where: { userId, completed: false, progress: { gt: 10 } },
+      take: limit,
+      orderBy: { watchedAt: 'desc' },
+      select: {
+        progress: true,
+        watchedAt: true,
+        video: {
+          select: {
+            id: true, title: true, thumbnailUrl: true, filePath: true,
+            duration: true, viewCount: true, category: true,
+            createdAt: true, user: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+  }
+
   async removeFromHistory(userId: string, videoId: string) {
     await this.prisma.watchHistory.deleteMany({ where: { userId, videoId } });
     return { message: 'Removed from history' };

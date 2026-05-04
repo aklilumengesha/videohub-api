@@ -13,6 +13,7 @@ export class SearchController {
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'uploadDate', required: false, description: 'today | week | month | year' })
   @ApiQuery({ name: 'sortBy', required: false, description: 'relevance | date | views' })
+  @ApiQuery({ name: 'duration', required: false, description: 'short | medium | long' })
   @Get('videos')
   searchVideos(
     @Query('q') q: string,
@@ -20,8 +21,9 @@ export class SearchController {
     @Query('limit') limit?: string,
     @Query('uploadDate') uploadDate?: string,
     @Query('sortBy') sortBy?: string,
+    @Query('duration') duration?: string,
   ) {
-    return this.searchService.searchVideos(q, cursor, limit ? parseInt(limit) : 20, uploadDate, sortBy);
+    return this.searchService.searchVideos(q, cursor, limit ? parseInt(limit) : 20, uploadDate, sortBy, duration);
   }
 
   @ApiOperation({ summary: 'Search users by name or bio' })

@@ -125,6 +125,18 @@ export class UserController {
     return this.userService.getHistory(req.user.userId, cursor, limit ? parseInt(limit) : 20);
   }
 
+  @ApiOperation({ summary: 'Get videos to continue watching (in-progress, not completed)' })
+  @ApiResponse({ status: 200, description: 'Returns in-progress videos' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me/continue-watching')
+  getContinueWatching(
+    @Request() req: { user: { userId: string } },
+    @Query('limit') limit?: string,
+  ) {
+    return this.userService.getContinueWatching(req.user.userId, limit ? parseInt(limit) : 10);
+  }
+
   @ApiOperation({ summary: 'Clear all watch history for current user' })
   @ApiResponse({ status: 200, description: 'History cleared' })
   @ApiBearerAuth()

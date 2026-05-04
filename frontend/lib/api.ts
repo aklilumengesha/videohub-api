@@ -244,6 +244,9 @@ export const usersApi = {
   removeFromHistory: (videoId: string) =>
     apiFetch(`/users/me/history/${videoId}`, { method: 'DELETE' }),
 
+  getContinueWatching: (limit = 10) =>
+    apiFetch(`/users/me/continue-watching?limit=${limit}`),
+
   getFollowers: (id: string, cursor?: string) =>
     apiFetch(`/users/${id}/followers${cursor ? `?cursor=${cursor}` : ''}`),
 
@@ -333,6 +336,11 @@ export const likesApi = {
     apiFetch(`/videos/${videoId}/dislike`, { method: 'DELETE' }),
 };
 
+export const likedVideosApi = {
+  getAll: (cursor?: string) =>
+    apiFetch(`/users/me/liked-videos${cursor ? `?cursor=${cursor}` : ''}`),
+};
+
 // ── Comments API ──────────────────────────────────────────────────────────────
 
 export const commentsApi = {
@@ -380,11 +388,12 @@ export const feedApi = {
 // ── Search API ────────────────────────────────────────────────────────────────
 
 export const searchApi = {
-  videos: (q: string, cursor?: string, uploadDate?: string, sortBy?: string) => {
+  videos: (q: string, cursor?: string, uploadDate?: string, sortBy?: string, duration?: string) => {
     const params = new URLSearchParams({ q });
     if (cursor) params.set('cursor', cursor);
     if (uploadDate) params.set('uploadDate', uploadDate);
     if (sortBy) params.set('sortBy', sortBy);
+    if (duration) params.set('duration', duration);
     return apiFetch(`/search/videos?${params.toString()}`);
   },
 

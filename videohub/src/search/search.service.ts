@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class SearchService {
   constructor(private prisma: PrismaService) {}
 
-  async searchVideos(q: string, cursor?: string, limit = 20, uploadDate?: string, sortBy?: string) {
+  async searchVideos(q: string, cursor?: string, limit = 20, uploadDate?: string, sortBy?: string, duration?: string) {
     if (!q || q.trim().length < 2) {
       throw new BadRequestException('Search query must be at least 2 characters');
     }
@@ -23,6 +23,12 @@ export class SearchService {
       if (cutoffs[uploadDate]) dateFilter = { gte: cutoffs[uploadDate] };
     }
 
+    // Duration filter: short < 240s, medium 240-1200s, long > 1200s
+    let durationFilter: { lt?: number; gte?: number; lte?: number } = {};
+    if (duration === 'short')  durationFilter = { lt: 240 };
+    if (duration === 'medium') durationFilter = { gte: 240, lte: 1200 };
+    if (duration === 'long')   durationFilter = { gte: 1200 };
+
     // Build sort order
     const orderBy: Record<string, string>[] =
       sortBy === 'views'  ? [{ viewCount: 'desc' }] :
@@ -32,6 +38,7 @@ export class SearchService {
     return this.prisma.video.findMany({
       where: {
         status: 'READY',
+        visibility: 'PUBLIC',
         OR: [
           { title: { contains: q, mode: 'insensitive' } },
           { description: { contains: q, mode: 'insensitive' } },
@@ -39,6 +46,7 @@ export class SearchService {
           { category: { equals: q, mode: 'insensitive' } },
         ],
         ...(Object.keys(dateFilter).length ? { createdAt: dateFilter } : {}),
+        ...(Object.keys(durationFilter).length ? { duration: durationFilter } : {}),
         ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
       },
       take: limit,

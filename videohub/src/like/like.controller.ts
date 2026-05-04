@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { LikeService } from './like.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -40,6 +40,24 @@ export class LikeController {
     @Request() req: { user: { userId: string } },
   ) {
     return this.likeService.unlike(videoId, req.user.userId);
+  }
+}
+
+@ApiTags('liked-videos')
+@Controller('users/me/liked-videos')
+export class LikedVideosController {
+  constructor(private readonly likeService: LikeService) {}
+
+  @ApiOperation({ summary: 'Get videos liked by the current user' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  getLikedVideos(
+    @Request() req: { user: { userId: string } },
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.likeService.getLikedVideos(req.user.userId, cursor, limit ? parseInt(limit) : 20);
   }
 }
 

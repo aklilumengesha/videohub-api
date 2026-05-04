@@ -18,6 +18,13 @@ const UPLOAD_DATE_OPTIONS = [
   { value: 'year', label: 'This year' },
 ];
 
+const DURATION_OPTIONS = [
+  { value: '', label: 'Any length' },
+  { value: 'short', label: 'Short (< 4 min)' },
+  { value: 'medium', label: 'Medium (4–20 min)' },
+  { value: 'long', label: 'Long (> 20 min)' },
+];
+
 const SORT_OPTIONS = [
   { value: 'relevance', label: 'Relevance' },
   { value: 'date', label: 'Upload date' },
@@ -50,17 +57,18 @@ export default function SearchPage() {
   const [error, setError] = useState('');
   const [uploadDate, setUploadDate] = useState('');
   const [sortBy, setSortBy] = useState('relevance');
+  const [duration, setDuration] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const doSearch = (q: string, date: string, sort: string) => {
+  const doSearch = (q: string, date: string, sort: string, dur: string) => {
     if (q.trim().length < 2) {
       setVideos([]); setUsers([]); setSearched(false); setError(''); return;
     }
     setLoading(true);
     setError('');
     Promise.all([
-      searchApi.videos(q.trim(), undefined, date || undefined, sort !== 'relevance' ? sort : undefined),
+      searchApi.videos(q.trim(), undefined, date || undefined, sort !== 'relevance' ? sort : undefined, dur || undefined),
       searchApi.users(q.trim()),
     ]).then(([v, u]) => {
       setVideos(v); setUsers(u); setSearched(true);
@@ -75,16 +83,16 @@ export default function SearchPage() {
     if (query.trim().length < 2) {
       setVideos([]); setUsers([]); setSearched(false); return;
     }
-    const timer = setTimeout(() => doSearch(query, uploadDate, sortBy), 500);
+    const timer = setTimeout(() => doSearch(query, uploadDate, sortBy, duration), 500);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   // Immediate re-search when filters change
   useEffect(() => {
-    if (searched) doSearch(query, uploadDate, sortBy);
+    if (searched) doSearch(query, uploadDate, sortBy, duration);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uploadDate, sortBy]);
+  }, [uploadDate, sortBy, duration]);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -163,6 +171,21 @@ export default function SearchPage() {
                       <button key={opt.value} onClick={() => setSortBy(opt.value)}
                         className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                           sortBy === opt.value
+                            ? 'bg-gray-900 text-white border-gray-900'
+                            : 'border-gray-300 text-gray-600 hover:bg-gray-100'
+                        }`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Duration</p>
+                  <div className="flex flex-wrap gap-2">
+                    {DURATION_OPTIONS.map(opt => (
+                      <button key={opt.value} onClick={() => setDuration(opt.value)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          duration === opt.value
                             ? 'bg-gray-900 text-white border-gray-900'
                             : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                         }`}>

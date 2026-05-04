@@ -107,4 +107,31 @@ export class LikeService {
     });
     return { disliked: !!record };
   }
+
+  async getLikedVideos(userId: string, cursor?: string, limit = 20) {
+    const likes = await this.prisma.like.findMany({
+      where: {
+        userId,
+        ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
+      },
+      take: limit + 1,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        createdAt: true,
+        video: {
+          select: {
+            id: true, title: true, thumbnailUrl: true, filePath: true,
+            duration: true, viewCount: true, likeCount: true,
+            category: true, tags: true, createdAt: true,
+            user: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    const hasMore = likes.length > limit;
+    const data = hasMore ? likes.slice(0, limit) : likes;
+    const nextCursor = hasMore ? data[data.length - 1].createdAt.toISOString() : null;
+    return { items: data, nextCursor };
+  }
 }
