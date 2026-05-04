@@ -43,7 +43,8 @@ export class VideoService implements OnModuleInit {
   async findAll(category?: string, sortBy: 'newest' | 'popular' = 'newest') {
     return this.prisma.video.findMany({
       where: {
-        status: { in: ['READY', 'FAILED'] },  // show both — FAILED means FFmpeg unavailable but file exists
+        status: { in: ['READY', 'FAILED'] },
+        visibility: 'PUBLIC',  // only show public videos in listings
         ...(category ? { category } : {}),
       },
       select: {
@@ -170,6 +171,7 @@ export class VideoService implements OnModuleInit {
         status: 'PROCESSING',
         category: dto.category,
         tags: dto.tags ?? [],
+        visibility: dto.visibility ?? 'PUBLIC',
       },
     });
 
@@ -291,6 +293,18 @@ export class VideoService implements OnModuleInit {
     }
 
     return results;
+  }
+
+  async uploadThumbnail(videoId: string, userId: string, thumbnailPath: string) {
+    const video = await this.prisma.video.findUnique({ where: { id: videoId } });
+    if (!video) throw new NotFoundException('Video not found');
+    if (video.userId !== userId) throw new ForbiddenException('Not your video');
+
+    return this.prisma.video.update({
+      where: { id: videoId },
+      data: { thumbnailUrl: thumbnailPath },
+      select: { id: true, thumbnailUrl: true },
+    });
   }
 
   async getStatus(id: string) {

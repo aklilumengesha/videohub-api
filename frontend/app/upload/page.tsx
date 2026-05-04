@@ -21,9 +21,11 @@ export default function UploadPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [visibility, setVisibility] = useState<'PUBLIC' | 'UNLISTED' | 'PRIVATE'>('PUBLIC');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
+  const [customThumbnail, setCustomThumbnail] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadState, setUploadState] = useState<UploadState>('idle');
@@ -118,6 +120,10 @@ export default function UploadPage() {
       // Simulate upload progress using XHR for real progress events
       const result = await uploadWithProgress(file, title, description);
       setVideoId(result.id);
+      // Upload custom thumbnail if provided
+      if (customThumbnail) {
+        await videosApi.uploadThumbnail(result.id, customThumbnail).catch(() => {});
+      }
       setUploadState('processing');
       setUploadProgress(100);
     } catch (err: unknown) {
@@ -136,6 +142,7 @@ export default function UploadPage() {
       formData.append('title', title);
       if (description) formData.append('description', description);
       if (category) formData.append('category', category);
+      formData.append('visibility', visibility);
       tags.forEach(t => formData.append('tags[]', t));
       formData.append('file', file);
 
@@ -279,6 +286,52 @@ export default function UploadPage() {
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} maxLength={500}
               placeholder="Describe your video (optional)"
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
+          </div>
+
+          {/* Visibility */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Visibility</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(['PUBLIC', 'UNLISTED', 'PRIVATE'] as const).map(v => (
+                <button key={v} type="button" onClick={() => setVisibility(v)}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
+                    visibility === v
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}>
+                  {v === 'PUBLIC' ? '🌐 Public' : v === 'UNLISTED' ? '🔗 Unlisted' : '🔒 Private'}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              {visibility === 'PUBLIC' ? 'Anyone can find and watch this video' :
+               visibility === 'UNLISTED' ? 'Only people with the link can watch' :
+               'Only you can watch this video'}
+            </p>
+          </div>
+
+          {/* Custom thumbnail */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Custom Thumbnail</label>
+            <div className="flex items-center gap-4">
+              {thumbnailPreview && (
+                <img src={thumbnailPreview} alt="Thumbnail preview"
+                  className="w-24 h-14 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
+              )}
+              <div>
+                <input type="file" accept="image/jpeg,image/png,image/webp"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    setCustomThumbnail(f);
+                    const reader = new FileReader();
+                    reader.onload = ev => setThumbnailPreview(ev.target?.result as string);
+                    reader.readAsDataURL(f);
+                  }}
+                  className="text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+                <p className="text-xs text-gray-400 mt-1">JPG, PNG or WebP · Max 5MB</p>
+              </div>
+            </div>
           </div>
 
           {/* Category */}

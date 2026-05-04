@@ -76,6 +76,7 @@ export interface Video {
   viewCount: number;
   duration?: number;
   status?: string;
+  visibility?: 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
   category?: string;
   tags?: string[];
   createdAt: string;
@@ -304,6 +305,12 @@ export const videosApi = {
 
   removeSubtitle: (videoId: string, subtitleId: string) =>
     apiFetch(`/videos/${videoId}/subtitles/${subtitleId}`, { method: 'DELETE' }),
+
+  uploadThumbnail: (videoId: string, file: File) => {
+    const formData = new FormData();
+    formData.append('thumbnail', file);
+    return apiFetch(`/videos/${videoId}/thumbnail`, { method: 'POST', body: formData });
+  },
 };
 
 // ── Likes API ─────────────────────────────────────────────────────────────────

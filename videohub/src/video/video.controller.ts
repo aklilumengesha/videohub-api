@@ -122,6 +122,37 @@ export class VideoController {
     return this.videoService.getSubtitles(id);
   }
 
+  @ApiOperation({ summary: 'Upload a custom thumbnail image for a video (owner only)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('thumbnail', {
+    storage: diskStorage({
+      destination: (_req, _file, cb) => {
+        const dir = join('uploads', 'thumbnails');
+        mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+      },
+      filename: (_req, file, cb) => {
+        const ext = extname(file.originalname).toLowerCase().replace(/[^a-z0-9.]/g, '');
+        cb(null, `${Date.now()}${ext}`);
+      },
+    }),
+    fileFilter: (_req, file, cb) => {
+      cb(null, /image\/(jpeg|png|webp)/.test(file.mimetype));
+    },
+  }))
+  @Post(':id/thumbnail')
+  uploadThumbnail(
+    @Param('id') id: string,
+    @Request() req: { user: { userId: string } },
+    @UploadedFile(new ParseFilePipe({
+      validators: [new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 })],
+    })) file: Express.Multer.File,
+  ) {
+    return this.videoService.uploadThumbnail(id, req.user.userId, file.path);
+  }
+
   @ApiOperation({ summary: 'Upload a VTT subtitle file for a video (owner only)' })
   @ApiConsumes('multipart/form-data')
   @ApiBearerAuth()

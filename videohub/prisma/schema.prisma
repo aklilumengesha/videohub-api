@@ -49,6 +49,7 @@ model Video {
   commentCount Int         @default(0)
   viewCount    Int         @default(0)
   status       VideoStatus @default(PROCESSING)
+  visibility   VideoVisibility @default(PUBLIC)  // PUBLIC, UNLISTED, PRIVATE
   duration     Int?        // seconds
   category     String?     // e.g. "Gaming", "Music", "Education"
   tags         String[]    // e.g. ["tutorial", "react", "typescript"]
@@ -76,6 +77,12 @@ enum VideoStatus {
   PROCESSING
   READY
   FAILED
+}
+
+enum VideoVisibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
 }
 
 model Like {

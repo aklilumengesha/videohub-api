@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MinLength, MaxLength, IsArray, ArrayMaxSize } from 'class-validator';
+import { IsString, IsOptional, MinLength, MaxLength, IsArray, ArrayMaxSize, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export const VIDEO_CATEGORIES = [
@@ -7,6 +7,12 @@ export const VIDEO_CATEGORIES = [
 ] as const;
 
 export type VideoCategory = typeof VIDEO_CATEGORIES[number];
+
+export enum VideoVisibility {
+  PUBLIC = 'PUBLIC',
+  UNLISTED = 'UNLISTED',
+  PRIVATE = 'PRIVATE',
+}
 
 export class UploadVideoDto {
   @ApiProperty({ example: 'My First Video' })
@@ -32,4 +38,9 @@ export class UploadVideoDto {
   @ArrayMaxSize(10)
   @IsString({ each: true })
   tags?: string[];
+
+  @ApiProperty({ enum: VideoVisibility, default: VideoVisibility.PUBLIC, required: false })
+  @IsEnum(VideoVisibility)
+  @IsOptional()
+  visibility?: VideoVisibility;
 }
