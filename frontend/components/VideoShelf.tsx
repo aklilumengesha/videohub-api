@@ -90,7 +90,7 @@ export default function VideoShelf({ title, videos, viewAllLink, icon }: VideoSh
         >
           {videos.map((video) => (
             <div key={video.id} className="flex-shrink-0 w-[280px]">
-              <VideoCard video={video} />
+              <VideoCard video={video} progress={(video as any)._progress} />
             </div>
           ))}
         </div>

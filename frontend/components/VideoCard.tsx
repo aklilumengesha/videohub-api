@@ -40,10 +40,12 @@ function formatViews(n: number): string {
 interface VideoCardProps {
   video: Video;
   showChannel?: boolean;
+  progress?: number; // seconds watched — renders a progress bar on the thumbnail
 }
 
-export default function VideoCard({ video, showChannel = true }: VideoCardProps) {
+export default function VideoCard({ video, showChannel = true, progress }: VideoCardProps) {
   const duration = formatDuration(video.duration);
+  const progressPct = progress && video.duration ? Math.min(100, (progress / video.duration) * 100) : 0;
   const [showPreview, setShowPreview] = useState(false);
   const [showSaveMenu, setShowSaveMenu] = useState(false);
   const [myPlaylists, setMyPlaylists] = useState<Playlist[]>([]);
@@ -196,6 +198,13 @@ export default function VideoCard({ video, showChannel = true }: VideoCardProps)
         {video.status === 'PROCESSING' && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-xl z-10">
             <span className="text-white text-xs font-medium bg-yellow-500 px-2 py-1 rounded">Processing...</span>
+          </div>
+        )}
+
+        {/* Watch progress bar */}
+        {progressPct > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30 z-10">
+            <div className="h-full bg-red-600 rounded-full" style={{ width: `${progressPct}%` }} />
           </div>
         )}
       </div>
