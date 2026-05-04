@@ -16,6 +16,44 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(months / 12)} year${Math.floor(months / 12) !== 1 ? 's' : ''} ago`;
 }
 
+// Parse timestamps like "1:23", "0:05", "1:23:45" and make them clickable
+function parseTimestamps(
+  text: string,
+  onSeek: (seconds: number) => void,
+): React.ReactNode[] {
+  const TIMESTAMP_RE = /\b(\d{1,2}):(\d{2})(?::(\d{2}))?\b/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = TIMESTAMP_RE.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const h = match[3] !== undefined ? parseInt(match[1]) : 0;
+    const m = match[3] !== undefined ? parseInt(match[2]) : parseInt(match[1]);
+    const s = match[3] !== undefined ? parseInt(match[3]) : parseInt(match[2]);
+    const totalSeconds = h * 3600 + m * 60 + s;
+    const label = match[0];
+    parts.push(
+      <button
+        key={`${match.index}-${label}`}
+        onClick={() => onSeek(totalSeconds)}
+        className="text-blue-600 hover:underline font-medium"
+      >
+        {label}
+      </button>
+    );
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts;
+}
+
 interface CommentThreadProps {
   comment: Comment;
   isVideoOwner: boolean;
@@ -26,6 +64,7 @@ interface CommentThreadProps {
   onUnlike: (commentId: string) => Promise<void>;
   onPin?: (commentId: string) => Promise<void>;
   onHeart?: (commentId: string) => Promise<void>;
+  onSeek?: (seconds: number) => void;
   depth?: number;
 }
 
@@ -39,6 +78,7 @@ export default function CommentThread({
   onUnlike,
   onPin,
   onHeart,
+  onSeek,
   depth = 0,
 }: CommentThreadProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
@@ -104,8 +144,12 @@ export default function CommentThread({
           )}
         </div>
 
-        {/* Comment text */}
-        <p className="text-sm text-gray-700 mb-2">{comment.content}</p>
+        {/* Comment text — timestamps are clickable if onSeek is provided */}
+        <p className="text-sm text-gray-700 mb-2">
+          {onSeek
+            ? parseTimestamps(comment.content, onSeek)
+            : comment.content}
+        </p>
 
         {/* Heart from creator */}
         {comment.isHearted && (
@@ -210,6 +254,7 @@ export default function CommentThread({
                 onLike={onLike}
                 onUnlike={onUnlike}
                 onHeart={onHeart}
+                onSeek={onSeek}
                 depth={depth + 1}
               />
             ))}

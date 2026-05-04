@@ -157,7 +157,7 @@ export default function PlaylistDetailPage() {
               <div key={item.video.id} className="flex gap-4 rounded-xl p-3 border"
                 style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
                 <span className="text-sm text-gray-400 w-5 flex-shrink-0 pt-1">{idx + 1}</span>
-                <Link href={`/videos/${item.video.id}`}
+                <Link href={`/videos/${item.video.id}?playlist=${id}`}
                   className="relative w-32 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-900">
                   <VideoThumbnail
                     thumbnailUrl={item.video.thumbnailUrl}
@@ -171,7 +171,7 @@ export default function PlaylistDetailPage() {
                   )}
                 </Link>
                 <div className="flex-1 min-w-0">
-                  <Link href={`/videos/${item.video.id}`}>
+                  <Link href={`/videos/${item.video.id}?playlist=${id}`}>
                     <h3 className="font-semibold text-gray-900 truncate hover:text-blue-600">{item.video.title}</h3>
                   </Link>
                   <p className="text-sm text-blue-600 mt-0.5">{item.video.user.name}</p>

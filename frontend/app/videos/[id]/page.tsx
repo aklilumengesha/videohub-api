@@ -82,6 +82,10 @@ export default function VideoPage() {
   const [creatingPlaylist, setCreatingPlaylist] = useState(false);
   const [notInterested, setNotInterested] = useState(false);
 
+  // Playlist queue — populated when ?playlist=<id> is in the URL
+  const playlistId = searchParams.get('playlist');
+  const [playlistQueue, setPlaylistQueue] = useState<Playlist | null>(null);
+
   // Autoplay next video
   const [autoplayCountdown, setAutoplayCountdown] = useState<number | null>(null);
   const autoplayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -328,15 +332,33 @@ export default function VideoPage() {
     finally { setReporting(false); setShowReportMenu(false); }
   };
 
-  // Autoplay: start countdown when video ends, navigate to first related video
+  // Load playlist queue when ?playlist= param is present
+  useEffect(() => {
+    if (!playlistId) { setPlaylistQueue(null); return; }
+    playlistsApi.getOne(playlistId).then(setPlaylistQueue).catch(() => {});
+  }, [playlistId]);
+
+  // Autoplay: start countdown when video ends, navigate to next playlist video or first related
   const startAutoplay = () => {
-    if (related.length === 0) return;
+    // Find next video in playlist queue if active
+    let nextVideoId: string | null = null;
+    if (playlistQueue?.videos) {
+      const items = playlistQueue.videos.sort((a, b) => a.position - b.position);
+      const currentIdx = items.findIndex(item => item.video.id === id);
+      if (currentIdx !== -1 && currentIdx < items.length - 1) {
+        nextVideoId = items[currentIdx + 1].video.id;
+      }
+    }
+    if (!nextVideoId && related.length > 0) nextVideoId = related[0].id;
+    if (!nextVideoId) return;
+
     setAutoplayCountdown(5);
     autoplayTimerRef.current = setInterval(() => {
       setAutoplayCountdown(prev => {
         if (prev === null || prev <= 1) {
           clearInterval(autoplayTimerRef.current!);
-          router.push(`/videos/${related[0].id}`);
+          const dest = nextVideoId + (playlistId ? `?playlist=${playlistId}` : '');
+          router.push(`/videos/${dest}`);
           return null;
         }
         return prev - 1;
@@ -449,37 +471,48 @@ export default function VideoPage() {
             )}
 
             {/* Autoplay countdown overlay */}
-            {autoplayCountdown !== null && related.length > 0 && (
-              <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-xl">
-                <div className="text-center text-white max-w-xs px-4">
-                  <p className="text-sm text-gray-300 mb-2">Up next</p>
-                  <p className="font-semibold text-base line-clamp-2 mb-4">{related[0].title}</p>
-                  {/* Circular countdown */}
-                  <div className="relative w-16 h-16 mx-auto mb-4">
-                    <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
-                      <circle cx="32" cy="32" r="28" fill="none" stroke="#374151" strokeWidth="4" />
-                      <circle cx="32" cy="32" r="28" fill="none" stroke="white" strokeWidth="4"
-                        strokeDasharray={`${2 * Math.PI * 28}`}
-                        strokeDashoffset={`${2 * Math.PI * 28 * (1 - autoplayCountdown / 5)}`}
-                        className="transition-all duration-1000 ease-linear" />
-                    </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-xl font-bold">
-                      {autoplayCountdown}
-                    </span>
-                  </div>
-                  <div className="flex gap-3 justify-center">
-                    <button onClick={cancelAutoplay}
-                      className="px-4 py-2 rounded-full border border-white/30 text-sm hover:bg-white/10 transition-colors">
-                      Cancel
-                    </button>
-                    <button onClick={() => { cancelAutoplay(); router.push(`/videos/${related[0].id}`); }}
-                      className="px-4 py-2 rounded-full bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors">
-                      Play now
-                    </button>
+            {autoplayCountdown !== null && (related.length > 0 || playlistQueue?.videos) && (() => {
+              // Determine next video for display
+              let nextVideo: { id: string; title: string } | null = null;
+              if (playlistQueue?.videos) {
+                const items = playlistQueue.videos.sort((a, b) => a.position - b.position);
+                const idx = items.findIndex(item => item.video.id === id);
+                if (idx !== -1 && idx < items.length - 1) nextVideo = items[idx + 1].video;
+              }
+              if (!nextVideo && related.length > 0) nextVideo = related[0];
+              if (!nextVideo) return null;
+              const nextDest = `/videos/${nextVideo.id}${playlistId ? `?playlist=${playlistId}` : ''}`;
+              return (
+                <div className="absolute inset-0 bg-black/80 flex items-center justify-center rounded-xl">
+                  <div className="text-center text-white max-w-xs px-4">
+                    <p className="text-sm text-gray-300 mb-2">Up next</p>
+                    <p className="font-semibold text-base line-clamp-2 mb-4">{nextVideo.title}</p>
+                    <div className="relative w-16 h-16 mx-auto mb-4">
+                      <svg className="w-16 h-16 -rotate-90" viewBox="0 0 64 64">
+                        <circle cx="32" cy="32" r="28" fill="none" stroke="#374151" strokeWidth="4" />
+                        <circle cx="32" cy="32" r="28" fill="none" stroke="white" strokeWidth="4"
+                          strokeDasharray={`${2 * Math.PI * 28}`}
+                          strokeDashoffset={`${2 * Math.PI * 28 * (1 - autoplayCountdown / 5)}`}
+                          className="transition-all duration-1000 ease-linear" />
+                      </svg>
+                      <span className="absolute inset-0 flex items-center justify-center text-xl font-bold">
+                        {autoplayCountdown}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 justify-center">
+                      <button onClick={cancelAutoplay}
+                        className="px-4 py-2 rounded-full border border-white/30 text-sm hover:bg-white/10 transition-colors">
+                        Cancel
+                      </button>
+                      <button onClick={() => { cancelAutoplay(); router.push(nextDest); }}
+                        className="px-4 py-2 rounded-full bg-white text-black text-sm font-medium hover:bg-gray-200 transition-colors">
+                        Play now
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Title */}
@@ -750,15 +783,90 @@ export default function VideoPage() {
                   onUnlike={handleUnlikeComment}
                   onPin={handlePinComment}
                   onHeart={handleHeartComment}
+                  onSeek={seekTo}
                 />
               ))}
             </div>
           </div>
         </div>
 
-        {/* ── RIGHT: related videos ── */}
+        {/* ── RIGHT: playlist queue or related videos ── */}
         <div className="hidden lg:block w-[400px] flex-shrink-0 space-y-3">
-          {related.length === 0 ? (
+          {playlistQueue?.videos ? (
+            /* Playlist queue panel */
+            <div className="rounded-xl overflow-hidden border" style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+              {/* Header */}
+              <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <div className="flex items-center justify-between mb-0.5">
+                  <h2 className="font-semibold text-gray-900 text-sm truncate">{playlistQueue.title}</h2>
+                  <Link href={`/playlists/${playlistQueue.id}`}
+                    className="text-xs text-blue-600 hover:underline flex-shrink-0 ml-2">
+                    View all
+                  </Link>
+                </div>
+                {(() => {
+                  const items = playlistQueue.videos!.sort((a, b) => a.position - b.position);
+                  const idx = items.findIndex(item => item.video.id === id);
+                  return (
+                    <p className="text-xs text-gray-500">
+                      {idx + 1} / {items.length}
+                    </p>
+                  );
+                })()}
+              </div>
+              {/* Queue items */}
+              <div className="overflow-y-auto max-h-[70vh]">
+                {playlistQueue.videos
+                  .sort((a, b) => a.position - b.position)
+                  .map(({ video: qv, position }) => {
+                    const isCurrent = qv.id === id;
+                    return (
+                      <Link
+                        key={qv.id}
+                        href={`/videos/${qv.id}?playlist=${playlistQueue.id}`}
+                        className={`flex gap-2 px-3 py-2 transition-colors ${
+                          isCurrent
+                            ? 'bg-gray-100'
+                            : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        {/* Position number */}
+                        <span className="text-xs text-gray-400 w-4 flex-shrink-0 mt-1 text-center">
+                          {isCurrent ? (
+                            <span className="text-blue-600">▶</span>
+                          ) : (
+                            position + 1
+                          )}
+                        </span>
+                        {/* Thumbnail */}
+                        <div className="relative w-28 h-16 flex-shrink-0 rounded overflow-hidden bg-gray-900">
+                          <VideoThumbnail
+                            thumbnailUrl={qv.thumbnailUrl}
+                            filePath={undefined}
+                            title={qv.title}
+                            className="object-cover"
+                          />
+                          {qv.duration && (
+                            <span className="absolute bottom-1 right-1 bg-black/90 text-white text-[10px] px-1 rounded font-medium">
+                              {formatDuration(qv.duration)}
+                            </span>
+                          )}
+                        </div>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-semibold line-clamp-2 leading-snug mb-0.5 ${
+                            isCurrent ? 'text-blue-600' : 'text-gray-900'
+                          }`}>
+                            {qv.title}
+                          </p>
+                          <p className="text-[11px] text-gray-500 truncate">{qv.user.name}</p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+              </div>
+            </div>
+          ) : related.length === 0 ? (
             <p className="text-sm text-gray-400">No related videos</p>
           ) : related.map(r => (
             <Link key={r.id} href={`/videos/${r.id}`}
