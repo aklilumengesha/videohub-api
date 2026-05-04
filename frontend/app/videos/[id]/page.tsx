@@ -782,11 +782,21 @@ export default function VideoPage() {
                 <p className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug mb-1">
                   {r.title}
                 </p>
-                <p className="text-xs text-gray-500">{r.user.name}</p>
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0">
+                    {r.user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <p className="text-xs text-gray-500 truncate">{r.user.name}</p>
+                </div>
                 <p className="text-xs text-gray-400">
                   {r.viewCount > 0 ? `${formatViews(r.viewCount)} views · ` : ''}
                   {timeAgo(r.createdAt)}
                 </p>
+                {r.category && (
+                  <span className="inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">
+                    {r.category}
+                  </span>
+                )}
               </div>
             </Link>
           ))}
