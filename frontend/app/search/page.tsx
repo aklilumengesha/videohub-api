@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { searchApi, type Video, type User } from '@/lib/api';
-import VideoThumbnail from '@/components/VideoThumbnail';
+import VideoCard from '@/components/VideoCard';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -30,16 +30,6 @@ const SORT_OPTIONS = [
   { value: 'date', label: 'Upload date' },
   { value: 'views', label: 'View count' },
 ];
-
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days < 1) return 'today';
-  if (days < 30) return `${days} day${days !== 1 ? 's' : ''} ago`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months} month${months !== 1 ? 's' : ''} ago`;
-  return `${Math.floor(months / 12)} year${Math.floor(months / 12) !== 1 ? 's' : ''} ago`;
-}
 
 function formatViews(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -228,29 +218,16 @@ export default function SearchPage() {
               <>
                 {/* Videos */}
                 {tab === 'videos' && (
-                  <div className="space-y-4">
+                  <div>
                     {videos.length === 0 ? (
                       <p className="text-gray-400 text-sm text-center py-8">No videos found</p>
-                    ) : videos.map(video => (
-                      <Link key={video.id} href={`/videos/${video.id}`}
-                        className="flex gap-4 group rounded-xl p-1 hover:bg-gray-100 transition-colors">
-                        <div className="relative w-40 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-gray-900">
-                          <VideoThumbnail thumbnailUrl={video.thumbnailUrl} filePath={video.filePath}
-                            title={video.title} className="object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0 py-0.5">
-                          <h3 className="font-semibold text-gray-900 line-clamp-2 text-sm leading-snug mb-1">{video.title}</h3>
-                          {video.description && (
-                            <p className="text-xs text-gray-500 line-clamp-1 mb-1">{video.description}</p>
-                          )}
-                          <p className="text-xs text-gray-500">{video.user.name}</p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {video.viewCount > 0 ? `${formatViews(video.viewCount)} views · ` : ''}
-                            {timeAgo(video.createdAt)}
-                          </p>
-                        </div>
-                      </Link>
-                    ))}
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+                        {videos.map(video => (
+                          <VideoCard key={video.id} video={video} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -287,7 +264,7 @@ export default function SearchPage() {
                           </div>
                           {(user as any).subscriberCount > 0 && (
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {formatViews((user as any).subscriberCount)} subscribers
+                              {((n: number) => n >= 1_000_000 ? `${(n/1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n/1_000).toFixed(0)}K` : `${n}`)((user as any).subscriberCount)} subscribers
                             </p>
                           )}
                           {user.bio && <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{user.bio}</p>}
