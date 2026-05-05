@@ -26,6 +26,7 @@ const NAV_ITEMS = [
 
 const LIBRARY_ITEMS = [
   { href: '/history',       icon: '🕐', label: 'History',       authRequired: true },
+  { href: '/liked',         icon: '👍', label: 'Liked videos',  authRequired: true },
   { href: '/playlists',     icon: '📋', label: 'Playlists',     authRequired: true },
   { href: '/notifications', icon: '🔔', label: 'Notifications', authRequired: true },
 ];
