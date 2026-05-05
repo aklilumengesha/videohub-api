@@ -452,7 +452,21 @@ export default function HlsPlayer({
               className="absolute h-full bg-red-600 rounded-full"
               style={{ width: `${progress}%` }}
             />
-            {/* Chapters markers */}
+            {/* Active chapter segment — slightly brighter overlay on current chapter */}
+            {chapters.length > 0 && currentChapter && duration > 0 && (() => {
+              const sorted = [...chapters].sort((a, b) => a.startTime - b.startTime);
+              const idx = sorted.findIndex(c => c.id === currentChapter.id);
+              const start = (currentChapter.startTime / duration) * 100;
+              const nextChapter = sorted[idx + 1];
+              const end = nextChapter ? (nextChapter.startTime / duration) * 100 : 100;
+              return (
+                <div
+                  className="absolute h-full bg-red-400/40 pointer-events-none"
+                  style={{ left: `${start}%`, width: `${end - start}%` }}
+                />
+              );
+            })()}
+            {/* Chapter markers */}
             {chapters.map(chapter => {
               const pos = duration ? (chapter.startTime / duration) * 100 : 0;
               return (
@@ -464,13 +478,21 @@ export default function HlsPlayer({
                 />
               );
             })}
-            {/* Hover time tooltip */}
+            {/* Hover time tooltip — shows time + chapter name if available */}
             {hoveredTime !== null && (
               <div 
                 className="absolute bottom-full mb-2 -translate-x-1/2 bg-black/90 text-white text-xs px-2 py-1 rounded whitespace-nowrap"
                 style={{ left: `${(hoveredTime / duration) * 100}%` }}
               >
-                {formatTime(hoveredTime)}
+                {(() => {
+                  if (!chapters.length) return formatTime(hoveredTime);
+                  const sorted = [...chapters].sort((a, b) => a.startTime - b.startTime);
+                  let chapterName = '';
+                  for (let i = sorted.length - 1; i >= 0; i--) {
+                    if (hoveredTime >= sorted[i].startTime) { chapterName = sorted[i].title; break; }
+                  }
+                  return chapterName ? `${formatTime(hoveredTime)} · ${chapterName}` : formatTime(hoveredTime);
+                })()}
               </div>
             )}
           </div>

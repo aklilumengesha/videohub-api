@@ -177,6 +177,7 @@ export default function HomePage() {
                   _progress: item.progress,
                 }))}
                 icon="▶️"
+                viewAllLink="/history"
               />
             )}
 
