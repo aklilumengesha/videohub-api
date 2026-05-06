@@ -95,6 +95,10 @@ export default function VideoPage() {
   const [showEndScreen, setShowEndScreen] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
 
+  // Shorts comments drawer
+  const [showShortsComments, setShowShortsComments] = useState(false);
+  const shortsCommentInputRef = useRef<HTMLInputElement>(null);
+
   // Autoplay next video
   const [autoplayCountdown, setAutoplayCountdown] = useState<number | null>(null);
   const autoplayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -576,13 +580,13 @@ export default function VideoPage() {
             </button>
 
             {/* Comments */}
-            <button className="flex flex-col items-center gap-1.5">
+            <button onClick={() => setShowShortsComments(true)} className="flex flex-col items-center gap-1.5">
               <div className="w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white shadow-lg transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <span className="text-white text-xs font-semibold">{video.commentCount}</span>
+              <span className="text-white text-xs font-semibold">{comments.length}</span>
             </button>
 
             {/* Share */}
@@ -603,6 +607,75 @@ export default function VideoPage() {
             )}
           </div>
         </div>
+
+        {/* Comments drawer — slides up from bottom */}
+        {showShortsComments && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setShowShortsComments(false)}>
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/60" />
+            {/* Drawer */}
+            <div
+              className="relative w-full max-w-lg rounded-t-2xl overflow-hidden flex flex-col"
+              style={{ background: 'var(--background)', maxHeight: '70vh' }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <h3 className="font-semibold text-gray-900">{comments.length} Comments</h3>
+                <button onClick={() => setShowShortsComments(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Comment input */}
+              <div className="px-4 py-3 border-b" style={{ borderColor: 'var(--border)' }}>
+                <form onSubmit={handleComment} className="flex gap-2">
+                  <input
+                    ref={shortsCommentInputRef}
+                    type="text"
+                    value={commentText}
+                    onChange={e => setCommentText(e.target.value)}
+                    placeholder={isLoggedIn ? 'Add a comment...' : 'Sign in to comment'}
+                    disabled={!isLoggedIn || commentLoading}
+                    maxLength={500}
+                    className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                    style={{ background: 'var(--surface)' }}
+                  />
+                  {commentText.trim() && (
+                    <button type="submit" disabled={commentLoading}
+                      className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 transition-colors">
+                      {commentLoading ? '...' : 'Post'}
+                    </button>
+                  )}
+                </form>
+              </div>
+
+              {/* Comments list */}
+              <div className="overflow-y-auto flex-1 px-4 py-3 space-y-4">
+                {comments.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">No comments yet. Be the first!</p>
+                ) : comments.map(comment => (
+                  <CommentThread
+                    key={comment.id}
+                    comment={comment}
+                    isVideoOwner={video.user.id === currentUserId}
+                    currentUserId={currentUserId || undefined}
+                    onReply={handleReplyComment}
+                    onDelete={handleDeleteComment}
+                    onLike={handleLikeComment}
+                    onUnlike={handleUnlikeComment}
+                    onPin={handlePinComment}
+                    onHeart={handleHeartComment}
+                    onSeek={seekTo}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
