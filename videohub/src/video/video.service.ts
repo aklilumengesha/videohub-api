@@ -46,8 +46,7 @@ export class VideoService implements OnModuleInit {
         status: { in: ['READY', 'FAILED'] },
         visibility: 'PUBLIC',
         ...(category ? { category } : {}),
-        // If isShort not explicitly requested, exclude Shorts from regular listings
-        ...(isShort !== undefined ? { isShort } : { isShort: false }),
+        ...(isShort !== undefined ? { isShort } : {}),
       },
       select: {
         id: true,

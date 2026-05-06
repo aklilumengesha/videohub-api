@@ -241,10 +241,10 @@ export default function HomePage() {
             )}
 
             {/* Latest uploads — Shorts excluded at backend */}
-            {allVideos.length > 0 && (
+            {allVideos.filter(v => !v.isShort).length > 0 && (
               <VideoShelf
                 title="Latest uploads"
-                videos={allVideos.slice(0, 10)}
+                videos={allVideos.filter(v => !v.isShort).slice(0, 10)}
                 icon="🆕"
               />
             )}
