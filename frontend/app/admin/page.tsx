@@ -38,6 +38,8 @@ export default function AdminPage() {
   const [filter, setFilter] = useState('PENDING');
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillResult, setBackfillResult] = useState<{ updated: number; total: number } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isLoggedIn) router.push('/auth/login');
@@ -116,6 +118,43 @@ export default function AdminPage() {
             ))}
           </div>
         )}
+
+        {/* Utility actions */}
+        <div className="rounded-xl p-5 border" style={{ background: 'var(--background)', borderColor: 'var(--border)' }}>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Utilities</h2>
+          <div className="flex flex-wrap gap-3 items-center">
+            <button
+              onClick={async () => {
+                setBackfilling(true);
+                setBackfillResult(null);
+                try {
+                  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+                  const token = localStorage.getItem('accessToken');
+                  const res = await fetch(`${API_URL}/videos/backfill-shorts`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  const data = await res.json();
+                  setBackfillResult({ updated: data.updated, total: data.total });
+                } catch { /* ignore */ }
+                finally { setBackfilling(false); }
+              }}
+              disabled={backfilling}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {backfilling ? (
+                <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Scanning...</>
+              ) : (
+                <>📱 Backfill Shorts detection</>
+              )}
+            </button>
+            {backfillResult && (
+              <span className="text-sm text-green-700 font-medium">
+                ✓ {backfillResult.updated} of {backfillResult.total} videos marked as Shorts
+              </span>
+            )}
+          </div>
+        </div>
 
         {/* Reports */}
         <div>

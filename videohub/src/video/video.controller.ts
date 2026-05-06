@@ -72,6 +72,14 @@ export class VideoController {
     return this.videoService.recoverStuckVideos();
   }
 
+  @ApiOperation({ summary: 'Backfill isShort flag for existing videos by probing file dimensions (admin utility)' })
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('backfill-shorts')
+  backfillShorts() {
+    return this.videoService.backfillShorts();
+  }
+
   @ApiOperation({ summary: 'Record a watch event for history (requires auth)' })
   @ApiResponse({ status: 200, description: 'Watch recorded' })
   @ApiBearerAuth()

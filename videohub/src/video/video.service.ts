@@ -331,6 +331,41 @@ export class VideoService implements OnModuleInit {
     return { recovered: result.count };
   }
 
+  /** Backfill isShort for existing videos — probes each file and sets isShort based on aspect ratio + duration */
+  async backfillShorts() {
+    const videos = await this.prisma.video.findMany({
+      where: { status: 'READY', isShort: false },
+      select: { id: true, filePath: true, hlsUrl: true, duration: true },
+    });
+
+    let updated = 0;
+    let skipped = 0;
+
+    for (const video of videos) {
+      const filePath = video.filePath;
+      if (!filePath) { skipped++; continue; }
+
+      try {
+        const info = await this.ffmpeg.getVideoInfo(filePath);
+        const isShort = info.height > info.width && info.duration <= 60;
+        if (isShort) {
+          await this.prisma.video.update({
+            where: { id: video.id },
+            data: {
+              isShort: true,
+              duration: info.duration || video.duration || undefined,
+            },
+          });
+          updated++;
+        }
+      } catch {
+        skipped++;
+      }
+    }
+
+    return { total: videos.length, updated, skipped };
+  }
+
   async recordWatch(videoId: string, userId: string, progress?: number) {
     // Get video duration to calculate if completed
     const video = await this.prisma.video.findUnique({
