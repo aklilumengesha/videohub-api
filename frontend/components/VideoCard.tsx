@@ -46,6 +46,7 @@ interface VideoCardProps {
 export default function VideoCard({ video, showChannel = true, progress }: VideoCardProps) {
   const duration = formatDuration(video.duration);
   const progressPct = progress && video.duration ? Math.min(100, (progress / video.duration) * 100) : 0;
+  const isShort = video.isShort === true;
   const [showPreview, setShowPreview] = useState(false);
   const [showSaveMenu, setShowSaveMenu] = useState(false);
   const [myPlaylists, setMyPlaylists] = useState<Playlist[]>([]);
@@ -118,7 +119,9 @@ export default function VideoCard({ video, showChannel = true, progress }: Video
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}>
       {/* Thumbnail / Preview */}
-      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-gray-900">
+      <div className={`relative w-full rounded-xl overflow-hidden bg-gray-900 ${
+        isShort ? 'aspect-[9/16]' : 'aspect-video'
+      }`}>
         {/* Static thumbnail */}
         <div className={`absolute inset-0 transition-opacity duration-300 ${showPreview ? 'opacity-0' : 'opacity-100'}`}>
           <VideoThumbnail
@@ -139,7 +142,14 @@ export default function VideoCard({ video, showChannel = true, progress }: Video
         {/* Duration badge */}
         {duration && (
           <span className="absolute bottom-1.5 right-1.5 bg-black/90 text-white text-xs font-medium px-1.5 py-0.5 rounded z-10">
-            {duration}
+            {isShort && video.duration ? `${video.duration}s` : duration}
+          </span>
+        )}
+
+        {/* Shorts badge */}
+        {isShort && (
+          <span className="absolute top-1.5 left-1.5 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded z-10">
+            SHORT
           </span>
         )}
 
