@@ -503,10 +503,18 @@ export default function VideoPage() {
       : video.filePath ? `${API_URL}/${video.filePath}` : null;
 
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="relative flex items-center justify-center w-full max-w-sm mx-auto" style={{ height: 'calc(100vh - 56px)' }}>
-          {/* Portrait player */}
-          <div className="relative w-full h-full max-h-[calc(100vh-56px)] flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center overflow-hidden" style={{ height: 'calc(100vh - 56px)' }}>
+        {/* Back button */}
+        <button onClick={() => router.back()}
+          className="absolute top-4 left-20 z-50 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        {/* Center: portrait video */}
+        <div className="flex items-center gap-4 h-full py-4">
+          <div className="relative flex-shrink-0" style={{ height: 'calc(100vh - 80px)', aspectRatio: '9/16', maxHeight: '720px' }}>
             {videoSrc ? (
               <video
                 src={videoSrc}
@@ -514,73 +522,86 @@ export default function VideoPage() {
                 loop
                 playsInline
                 controls
-                className="h-full w-auto max-w-full rounded-xl object-contain"
-                style={{ maxHeight: 'calc(100vh - 56px)' }}
+                className="w-full h-full rounded-2xl object-cover bg-black"
                 onTimeUpdate={(e) => handleTimeUpdate(e.currentTarget.currentTime)}
               />
             ) : (
-              <div className="flex items-center justify-center text-gray-400 text-4xl">🎬</div>
+              <div className="w-full h-full rounded-2xl bg-gray-900 flex items-center justify-center text-gray-400 text-4xl">🎬</div>
             )}
 
-            {/* Overlay: title + channel at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent rounded-b-xl pointer-events-none">
-              <Link href={`/profile/${video.user.id}`} className="text-white text-sm font-semibold pointer-events-auto hover:underline">
+            {/* Bottom overlay: channel + title */}
+            <div className="absolute bottom-14 left-0 right-0 px-4 pb-2 bg-gradient-to-t from-black/70 to-transparent rounded-b-2xl pointer-events-none">
+              <Link href={`/profile/${video.user.id}`} className="text-white text-sm font-bold pointer-events-auto hover:underline block">
                 @{video.user.name}
               </Link>
               <p className="text-white/90 text-sm mt-0.5 line-clamp-2">{video.title}</p>
               {video.description && (
-                <p className="text-white/70 text-xs mt-0.5 line-clamp-1">{video.description}</p>
+                <p className="text-white/60 text-xs mt-0.5 line-clamp-1">{video.description}</p>
               )}
             </div>
           </div>
 
-          {/* Right side action buttons — YouTube Shorts style */}
-          <div className="absolute right-2 bottom-24 flex flex-col items-center gap-5">
+          {/* Right side: action buttons */}
+          <div className="flex flex-col items-center gap-6 flex-shrink-0 pb-8">
+            {/* Channel avatar */}
+            <div className="flex flex-col items-center gap-1">
+              <Link href={`/profile/${video.user.id}`}
+                className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg border-2 border-white shadow-lg">
+                {video.user.name.charAt(0).toUpperCase()}
+              </Link>
+            </div>
+
             {/* Like */}
-            <button onClick={handleLike} className="flex flex-col items-center gap-1">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${liked ? 'bg-white text-red-600' : 'bg-white/20 text-white'}`}>
-                <svg className="w-5 h-5" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+            <button onClick={handleLike} className="flex flex-col items-center gap-1.5">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+                liked ? 'bg-red-500 text-white' : 'bg-white/15 text-white hover:bg-white/25'
+              }`}>
+                <svg className="w-6 h-6" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
                 </svg>
               </div>
-              <span className="text-white text-xs font-medium">{likeCount > 0 ? likeCount : 'Like'}</span>
+              <span className="text-white text-xs font-semibold">{likeCount > 0 ? likeCount.toLocaleString() : 'Like'}</span>
             </button>
 
-            {/* Comments count */}
-            <button className="flex flex-col items-center gap-1">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Dislike */}
+            <button onClick={handleDislike} className="flex flex-col items-center gap-1.5">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-colors ${
+                disliked ? 'bg-gray-500 text-white' : 'bg-white/15 text-white hover:bg-white/25'
+              }`}>
+                <svg className="w-6 h-6" fill={disliked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018c.163 0 .326.02.485.06L17 4m-7 10v2a2 2 0 002 2h.095c.5 0 .905-.405.905-.904 0-.715.211-1.413.608-2.008L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.5" />
+                </svg>
+              </div>
+              <span className="text-white text-xs font-semibold">Dislike</span>
+            </button>
+
+            {/* Comments */}
+            <button className="flex flex-col items-center gap-1.5">
+              <div className="w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white shadow-lg transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
               </div>
-              <span className="text-white text-xs font-medium">{video.commentCount}</span>
+              <span className="text-white text-xs font-semibold">{video.commentCount}</span>
             </button>
 
             {/* Share */}
-            <button onClick={handleShare} className="flex flex-col items-center gap-1">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onClick={handleShare} className="flex flex-col items-center gap-1.5">
+              <div className="w-12 h-12 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white shadow-lg transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                 </svg>
               </div>
-              <span className="text-white text-xs font-medium">Share</span>
+              <span className="text-white text-xs font-semibold">Share</span>
             </button>
 
-            {/* Channel avatar */}
-            <Link href={`/profile/${video.user.id}`} className="flex flex-col items-center gap-1">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm border-2 border-white">
-                {video.user.name.charAt(0).toUpperCase()}
+            {/* Subscribe (if not own video) */}
+            {currentUserId !== video.user.id && (
+              <div className="flex flex-col items-center gap-1.5">
+                <SubscribeButton userId={video.user.id} size="sm" />
               </div>
-            </Link>
+            )}
           </div>
-
-          {/* Back button */}
-          <button onClick={() => router.back()}
-            className="absolute top-4 left-4 w-9 h-9 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
         </div>
       </div>
     );
