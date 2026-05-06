@@ -46,7 +46,8 @@ export class VideoService implements OnModuleInit {
         status: { in: ['READY', 'FAILED'] },
         visibility: 'PUBLIC',
         ...(category ? { category } : {}),
-        ...(isShort !== undefined ? { isShort } : {}),
+        // If isShort not explicitly requested, exclude Shorts from regular listings
+        ...(isShort !== undefined ? { isShort } : { isShort: false }),
       },
       select: {
         id: true,
@@ -209,6 +210,7 @@ export class VideoService implements OnModuleInit {
     return this.prisma.video.findMany({
       where: {
         status: 'READY',
+        isShort: false,  // Shorts have their own trending
         createdAt: { gte: sevenDaysAgo },
       },
       take: limit,

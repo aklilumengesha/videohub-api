@@ -12,6 +12,7 @@ const videoSelect = {
   commentCount: true,
   viewCount: true,
   duration: true,
+  isShort: true,
   status: true,
   category: true,
   tags: true,
@@ -39,6 +40,9 @@ export class FeedService {
     return this.prisma.video.findMany({
       where: {
         userId: { in: followingIds },
+        status: 'READY',
+        visibility: 'PUBLIC',
+        isShort: false,  // Shorts have their own feed
         ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
       },
       take: limit,
@@ -51,6 +55,9 @@ export class FeedService {
   async getExploreFeed(cursor?: string, limit = 20) {
     return this.prisma.video.findMany({
       where: {
+        status: 'READY',
+        visibility: 'PUBLIC',
+        isShort: false,  // Shorts have their own feed
         ...(cursor ? { createdAt: { lt: new Date(cursor) } } : {}),
       },
       take: limit,

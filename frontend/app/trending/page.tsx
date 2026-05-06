@@ -39,7 +39,7 @@ export default function TrendingPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-8">
-            {videos.map((video, i) => (
+            {videos.filter(v => !v.isShort).map((video, i) => (
               <div key={video.id} className="relative">
                 {/* Rank badge */}
                 <div className={`absolute top-2 left-2 z-10 text-white text-xs font-bold px-2 py-0.5 rounded-full ${

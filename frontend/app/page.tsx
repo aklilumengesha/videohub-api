@@ -186,20 +186,20 @@ export default function HomePage() {
               />
             )}
 
-            {/* Personalized feed for logged-in users — exclude Shorts */}
-            {isLoggedIn && personalizedVideos.filter(v => !v.isShort).length > 0 && (
+            {/* Personalized feed — Shorts excluded at backend */}
+            {isLoggedIn && personalizedVideos.length > 0 && (
               <VideoShelf
                 title="Recommended for you"
-                videos={personalizedVideos.filter(v => !v.isShort)}
+                videos={personalizedVideos}
                 icon="✨"
               />
             )}
 
-            {/* Trending videos — exclude Shorts */}
-            {trendingVideos.filter(v => !v.isShort).length > 0 && (
+            {/* Trending videos — Shorts excluded at backend */}
+            {trendingVideos.length > 0 && (
               <VideoShelf
                 title="Trending"
-                videos={trendingVideos.filter(v => !v.isShort)}
+                videos={trendingVideos}
                 icon="🔥"
               />
             )}
@@ -240,11 +240,11 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Latest uploads — exclude Shorts */}
-            {allVideos.filter(v => !v.isShort).length > 0 && (
+            {/* Latest uploads — Shorts excluded at backend */}
+            {allVideos.length > 0 && (
               <VideoShelf
                 title="Latest uploads"
-                videos={allVideos.filter(v => !v.isShort).slice(0, 10)}
+                videos={allVideos.slice(0, 10)}
                 icon="🆕"
               />
             )}
