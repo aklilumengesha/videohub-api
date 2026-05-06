@@ -62,6 +62,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   const [myChannelHref, setMyChannelHref] = useState('/channel');
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [showAllSubs, setShowAllSubs] = useState(false);
+  const [youExpanded, setYouExpanded] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -121,17 +122,37 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         {/* ── You section ── */}
         {isLoggedIn && (
           <>
-            <Divider label="You" />
-            <Link href={myChannelHref}
-              className={`flex items-center gap-5 px-3 py-2 rounded-xl text-sm transition-colors ${
-                pathname.startsWith('/channel') ? 'bg-gray-100 font-semibold text-gray-900' : 'text-gray-700 hover:bg-gray-100'
-              }`}>
-              <span className="flex-shrink-0 w-6">{Icon.Channel(pathname.startsWith('/channel'))}</span>
-              {isOpen && <span className="truncate">Your channel</span>}
-            </Link>
-            <Item href="/history"   label="History"     iconFn={Icon.History} />
-            <Item href="/playlists" label="Playlists"   iconFn={Icon.Playlist} />
-            <Item href="/liked"     label="Liked videos" iconFn={Icon.Liked} />
+            <Divider />
+            {/* "You ›" expandable header like YouTube */}
+            <button
+              onClick={() => setYouExpanded(v => !v)}
+              className="flex items-center gap-5 px-3 py-2 rounded-xl text-sm font-semibold text-gray-900 hover:bg-gray-100 w-full transition-colors"
+            >
+              <span className="flex-shrink-0 w-6 text-base">👤</span>
+              {isOpen && (
+                <span className="flex items-center gap-1 flex-1">
+                  You
+                  <svg className={`w-4 h-4 ml-1 transition-transform ${youExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
+              )}
+            </button>
+
+            {youExpanded && (
+              <>
+                <Link href={myChannelHref}
+                  className={`flex items-center gap-5 px-3 py-2 rounded-xl text-sm transition-colors ${
+                    pathname.startsWith('/channel') ? 'bg-gray-100 font-semibold text-gray-900' : 'text-gray-700 hover:bg-gray-100'
+                  }`}>
+                  <span className="flex-shrink-0 w-6">{Icon.Channel(pathname.startsWith('/channel'))}</span>
+                  {isOpen && <span className="truncate">Your channel</span>}
+                </Link>
+                <Item href="/history"   label="History"      iconFn={Icon.History} />
+                <Item href="/playlists" label="Playlists"    iconFn={Icon.Playlist} />
+                <Item href="/liked"     label="Liked videos" iconFn={Icon.Liked} />
+              </>
+            )}
           </>
         )}
 
@@ -139,8 +160,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         {isLoggedIn && subscriptions.length > 0 && (
           <>
             <Divider label="Subscriptions" />
-            {visibleSubs.map(({ following: ch }) => {
-              const on = pathname === `/channel/${ch.id}`;
+            {visibleSubs.map(({ following: ch }) => {              const on = pathname === `/channel/${ch.id}`;
               return (
                 <Link key={ch.id} href={`/channel/${ch.id}`}
                   aria-current={on ? 'page' : undefined}

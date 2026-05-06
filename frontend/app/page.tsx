@@ -186,39 +186,65 @@ export default function HomePage() {
               />
             )}
 
-            {/* Personalized feed for logged-in users */}
-            {isLoggedIn && personalizedVideos.length > 0 && (
+            {/* Personalized feed for logged-in users — exclude Shorts */}
+            {isLoggedIn && personalizedVideos.filter(v => !v.isShort).length > 0 && (
               <VideoShelf
                 title="Recommended for you"
-                videos={personalizedVideos}
+                videos={personalizedVideos.filter(v => !v.isShort)}
                 icon="✨"
               />
             )}
 
-            {/* Trending videos */}
-            {trendingVideos.length > 0 && (
+            {/* Trending videos — exclude Shorts */}
+            {trendingVideos.filter(v => !v.isShort).length > 0 && (
               <VideoShelf
                 title="Trending"
-                videos={trendingVideos}
+                videos={trendingVideos.filter(v => !v.isShort)}
                 icon="🔥"
               />
             )}
 
-            {/* Shorts */}
+            {/* Shorts — YouTube-style portrait row */}
             {shortsVideos.length > 0 && (
-              <VideoShelf
-                title="Shorts"
-                videos={shortsVideos}
-                icon="📱"
-                viewAllLink="/shorts"
-              />
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4 px-4">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <span>📱</span> Shorts
+                  </h2>
+                  <Link href="/shorts" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                    View all →
+                  </Link>
+                </div>
+                <div className="flex gap-3 overflow-x-auto scrollbar-hide px-4 pb-2"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {shortsVideos.map(video => (
+                    <Link key={video.id} href={`/videos/${video.id}`}
+                      className="flex-shrink-0 w-[160px] group block">
+                      <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-gray-900">
+                        {video.thumbnailUrl ? (
+                          <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/${video.thumbnailUrl}`}
+                            alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-500 text-2xl">🎬</div>
+                        )}
+                        <span className="absolute top-1.5 left-1.5 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">SHORT</span>
+                        {video.duration && (
+                          <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-xs px-1.5 py-0.5 rounded font-medium">{video.duration}s</span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-sm font-semibold text-gray-900 line-clamp-2 leading-snug px-0.5">{video.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 px-0.5">{video.viewCount > 0 ? `${video.viewCount} views` : video.user.name}</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {/* Latest uploads */}
-            {allVideos.length > 0 && (
+            {/* Latest uploads — exclude Shorts */}
+            {allVideos.filter(v => !v.isShort).length > 0 && (
               <VideoShelf
                 title="Latest uploads"
-                videos={allVideos.slice(0, 10)}
+                videos={allVideos.filter(v => !v.isShort).slice(0, 10)}
                 icon="🆕"
               />
             )}
