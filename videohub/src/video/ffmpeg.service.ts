@@ -188,4 +188,56 @@ export class FfmpegService {
       });
     });
   }
+
+  // ── Video info (dimensions + duration in one probe) ─────────────────────────
+  getVideoInfo(inputPath: string): Promise<{ width: number; height: number; duration: number }> {
+    return new Promise((resolve, reject) => {
+      ffmpeg.ffprobe(inputPath, (err: Error, metadata: any) => {
+        if (err) { reject(err); return; }
+        const videoStream = metadata.streams?.find((s: any) => s.codec_type === 'video');
+        resolve({
+          width: videoStream?.width ?? 0,
+          height: videoStream?.height ?? 0,
+          duration: Math.round(metadata.format?.duration ?? 0),
+        });
+      });
+    });
+  }
+
+  // ── Short-form (portrait) HLS encoding ─────────────────────────────────────
+  // For 9:16 videos — uses portrait renditions to avoid black bars
+  async encodeHlsPortrait(inputPath: string, videoId: string): Promise<HlsResult> {
+    const hlsDir = join('uploads', 'hls', videoId);
+    mkdirSync(hlsDir, { recursive: true });
+
+    const portraitRenditions = [
+      { name: '720p',  width: 720,  height: 1280, bitrate: '2800k', audioBitrate: '128k' },
+      { name: '480p',  width: 480,  height: 854,  bitrate: '1400k', audioBitrate: '128k' },
+      { name: '360p',  width: 360,  height: 640,  bitrate: '800k',  audioBitrate: '96k'  },
+    ];
+
+    for (const rendition of portraitRenditions) {
+      await this.encodeRendition(inputPath, hlsDir, rendition);
+    }
+
+    const masterPlaylistPath = join(hlsDir, 'master.m3u8');
+    const { writeFileSync } = require('fs');
+    const lines = [
+      '#EXTM3U',
+      '#EXT-X-VERSION:3',
+      '',
+      '#EXT-X-STREAM-INF:BANDWIDTH=2800000,RESOLUTION=720x1280,NAME="720p"',
+      '720p/playlist.m3u8',
+      '',
+      '#EXT-X-STREAM-INF:BANDWIDTH=1400000,RESOLUTION=480x854,NAME="480p"',
+      '480p/playlist.m3u8',
+      '',
+      '#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=360x640,NAME="360p"',
+      '360p/playlist.m3u8',
+    ];
+    writeFileSync(masterPlaylistPath, lines.join('\n'));
+
+    this.logger.log(`Portrait HLS encoding complete for video ${videoId}`);
+    return { masterPlaylistPath, hlsDir };
+  }
 }

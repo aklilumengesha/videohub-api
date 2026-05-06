@@ -40,16 +40,23 @@ export class VideoProcessor {
         this.logger.warn(`Thumbnail extraction failed: ${(thumbErr as Error).message}`);
       }
 
-      // Step 2 — Get video duration
+      // Step 2 — Get video info (dimensions + duration) to detect Shorts
       let duration: number | null = null;
+      let isShort = false;
       try {
-        duration = await this.ffmpeg.getDuration(filePath);
+        const info = await this.ffmpeg.getVideoInfo(filePath);
+        duration = info.duration;
+        // Short = portrait aspect ratio (height > width) AND ≤ 60 seconds
+        isShort = info.height > info.width && info.duration <= 60;
+        this.logger.log(`Video info: ${info.width}x${info.height}, ${info.duration}s, isShort=${isShort}`);
       } catch {
-        // non-fatal — duration is optional
+        // non-fatal — fall back to landscape encoding
       }
 
-      // Step 3 — HLS multi-quality encoding (the main work)
-      const { masterPlaylistPath } = await this.ffmpeg.encodeHls(filePath, videoId);
+      // Step 3 — HLS encoding (portrait for Shorts, landscape for regular)
+      const { masterPlaylistPath } = isShort
+        ? await this.ffmpeg.encodeHlsPortrait(filePath, videoId)
+        : await this.ffmpeg.encodeHls(filePath, videoId);
 
       // Step 4 — Mark video as READY with all metadata
       await this.prisma.video.update({
@@ -58,6 +65,7 @@ export class VideoProcessor {
           hlsUrl: masterPlaylistPath,
           thumbnailUrl: thumbnailUrl ?? undefined,
           duration: duration ?? undefined,
+          isShort,
           status: 'READY',
         },
       });

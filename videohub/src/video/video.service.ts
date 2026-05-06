@@ -40,12 +40,13 @@ export class VideoService implements OnModuleInit {
     });
   }
 
-  async findAll(category?: string, sortBy: 'newest' | 'popular' = 'newest') {
+  async findAll(category?: string, sortBy: 'newest' | 'popular' = 'newest', isShort?: boolean) {
     return this.prisma.video.findMany({
       where: {
         status: { in: ['READY', 'FAILED'] },
-        visibility: 'PUBLIC',  // only show public videos in listings
+        visibility: 'PUBLIC',
         ...(category ? { category } : {}),
+        ...(isShort !== undefined ? { isShort } : {}),
       },
       select: {
         id: true,
@@ -58,6 +59,7 @@ export class VideoService implements OnModuleInit {
         commentCount: true,
         viewCount: true,
         duration: true,
+        isShort: true,
         status: true,
         category: true,
         tags: true,
@@ -84,6 +86,7 @@ export class VideoService implements OnModuleInit {
         commentCount: true,
         viewCount: true,
         duration: true,
+        isShort: true,
         status: true,
         category: true,
         tags: true,
@@ -146,6 +149,7 @@ export class VideoService implements OnModuleInit {
         likeCount: true,
         commentCount: true,
         duration: true,
+        isShort: true,
         status: true,
         category: true,
         tags: true,
@@ -220,6 +224,7 @@ export class VideoService implements OnModuleInit {
         commentCount: true,
         viewCount: true,
         duration: true,
+        isShort: true,
         status: true,
         category: true,
         tags: true,
@@ -244,6 +249,7 @@ export class VideoService implements OnModuleInit {
       thumbnailUrl: true,
       filePath: true,
       duration: true,
+      isShort: true,
       viewCount: true,
       category: true,
       tags: true,

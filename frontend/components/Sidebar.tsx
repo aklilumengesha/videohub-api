@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/',         icon: '🏠', label: 'Home' },
   { href: '/feed',     icon: '📺', label: 'Feed',     authRequired: true },
   { href: '/trending', icon: '🔥', label: 'Trending' },
+  { href: '/shorts',   icon: '📱', label: 'Shorts' },
   { href: '/search',   icon: '🔍', label: 'Search' },
 ];
 

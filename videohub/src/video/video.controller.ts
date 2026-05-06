@@ -27,9 +27,11 @@ export class VideoController {
   findAll(
     @Query('category') category?: string,
     @Query('sort') sort?: string,
+    @Query('isShort') isShort?: string,
   ) {
     const sortBy = sort === 'popular' ? 'popular' : 'newest';
-    return this.videoService.findAll(category, sortBy);
+    const shortFilter = isShort === 'true' ? true : isShort === 'false' ? false : undefined;
+    return this.videoService.findAll(category, sortBy, shortFilter);
   }
 
   @ApiOperation({ summary: 'Get trending videos — most viewed in the last 7 days' })

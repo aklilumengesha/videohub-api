@@ -52,6 +52,7 @@ model Video {
   status       VideoStatus @default(PROCESSING)
   visibility   VideoVisibility @default(PUBLIC)  // PUBLIC, UNLISTED, PRIVATE
   duration     Int?        // seconds
+  isShort      Boolean     @default(false)       // true if portrait (9:16) and ≤ 60s — like YouTube Shorts
   category     String?     // e.g. "Gaming", "Music", "Education"
   tags         String[]    // e.g. ["tutorial", "react", "typescript"]
   createdAt    DateTime    @default(now())

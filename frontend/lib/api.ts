@@ -76,6 +76,7 @@ export interface Video {
   commentCount: number;
   viewCount: number;
   duration?: number;
+  isShort?: boolean;
   status?: string;
   visibility?: 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
   category?: string;
@@ -269,6 +270,8 @@ export const videosApi = {
   getOne: (id: string) => apiFetch(`/videos/${id}`),
 
   getTrending: () => apiFetch('/videos/trending'),
+
+  getShorts: () => apiFetch('/videos?sort=newest&isShort=true'),
 
   getRelated: (id: string) => apiFetch(`/videos/${id}/related`),
 

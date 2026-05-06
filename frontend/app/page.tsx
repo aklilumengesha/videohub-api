@@ -26,6 +26,7 @@ export default function HomePage() {
   const [trendingVideos, setTrendingVideos] = useState<Video[]>([]);
   const [personalizedVideos, setPersonalizedVideos] = useState<Video[]>([]);
   const [exploreVideos, setExploreVideos] = useState<Video[]>([]);
+  const [shortsVideos, setShortsVideos] = useState<Video[]>([]);
   const [continueWatching, setContinueWatching] = useState<ContinueWatchingItem[]>([]);
   const [categoryVideos, setCategoryVideos] = useState<Record<string, Video[]>>({});
   const [activeCategory, setActiveCategory] = useState('All');
@@ -74,6 +75,10 @@ export default function HomePage() {
           // "New to you" — videos from channels the user doesn't follow (or popular for guests)
           const explore = await feedApi.getExplore().catch(() => []);
           setExploreVideos(explore.slice(0, 10));
+
+          // Shorts
+          const shorts = await videosApi.getShorts().catch(() => []);
+          setShortsVideos(shorts.filter((v: Video) => v.isShort).slice(0, 10));
 
           const categories = ['Gaming', 'Music', 'Education', 'Entertainment'];
           const categoryData: Record<string, Video[]> = {};
@@ -196,6 +201,16 @@ export default function HomePage() {
                 title="Trending"
                 videos={trendingVideos}
                 icon="🔥"
+              />
+            )}
+
+            {/* Shorts */}
+            {shortsVideos.length > 0 && (
+              <VideoShelf
+                title="Shorts"
+                videos={shortsVideos}
+                icon="📱"
+                viewAllLink="/shorts"
               />
             )}
 
